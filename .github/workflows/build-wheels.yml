@@ -38,66 +38,56 @@ jobs:
       # LINUX : installation dans le CONTENEUR MANYLINUX
       # ==========================================================================
       - name: Build wheels (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cd StOpt
-          CIBW_BEFORE_ALL_LINUX="
-            echo '=== Installing Eigen ===' &&
-            curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
-            tar -xzf eigen.tar.gz &&
-            cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps &&
-            cmake --build eigen-build --target install &&
-            echo '=== Installing COIN-OR ===' &&
-            yum install -y coin-or-Clp-devel coin-or-Osi-devel &&
-            echo '=== Installing Boost ===' &&
-            yum install -y boost-devel &&
-            echo '=== Installing OpenMPI ===' &&
-            yum install -y openmpi-devel
-          " \
-          CIBW_ENVIRONMENT="
-            CMAKE_PREFIX_PATH=/project/deps;
-            LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH
-          " \
-          cibuildwheel --platform linux --output-dir ../wheelhouse
+       if: runner.os == 'Linux'
+       run: |
+        cd StOpt
+    	CIBW_BEFORE_ALL_LINUX="echo '=== Installing Eigen ===' \
+      	&& curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz \
+      	&& tar -xzf eigen.tar.gz \
+      	&& cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps \
+      	&& cmake --build eigen-build --target install \
+      	&& echo '=== Installing COIN-OR ===' \
+      	&& yum install -y coin-or-Clp-devel coin-or-Osi-devel \
+      	&& echo '=== Installing Boost ===' \
+      	&& yum install -y boost-devel \
+      	&& echo '=== Installing OpenMPI ===' \
+      	&& yum install -y openmpi-devel" \
+    	CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
+    	cibuildwheel --platform linux --output-dir ../wheelhouse     - name: Build wheels (Linux)
+       
 
       # ==========================================================================
       # MACOS (brew)
       # ==========================================================================
       - name: Build wheels (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install eigen boost openmpi coin-or-tools-clp coin-or-tools-osi
-          cd StOpt
-          CIBW_ENVIRONMENT="
-            CMAKE_PREFIX_PATH=$(brew --prefix);
-            LDFLAGS='-Wl,-rpath,@loader_path'
-          " \
-          cibuildwheel --platform macos --output-dir ../wheelhouse
-
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install eigen boost openmpi coin-or-tools-clp coin-or-tools-osi
+      	cd StOpt
+      	CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix) LDFLAGS=-Wl,-rpath,@loader_path" \
+      	cibuildwheel --platform macos --output-dir ../wheelhouse      - name: Build wheels (macOS)
+ 
       # ==========================================================================
       # WINDOWS (choco + compilation Eigen)
       # ==========================================================================
       - name: Build wheels (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-          choco install boost-msvc-14.3 -y
-          choco install coinmp -y
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+      	   choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+    	   choco install boost-msvc-14.3 -y
+    	   choco install coinmp -y
 
-          mkdir C:\deps
-          Invoke-WebRequest -OutFile eigen.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
-          Expand-Archive eigen.zip -DestinationPath .
-          cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
-          cmake --build eigen-build --config Release --target install
+    	   mkdir C:\deps
+    	   Invoke-WebRequest -OutFile eigen.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
+    	   Expand-Archive eigen.zip -DestinationPath .
+    	   cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
+    	   cmake --build eigen-build --config Release --target install
 
-          cd StOpt
-          CIBW_ENVIRONMENT="
-            CMAKE_PREFIX_PATH=C:\\deps;
-            PATH=C:\\deps\\bin;$Env:PATH
-          " \
-          cibuildwheel --platform windows --output-dir ../wheelhouse
+    	   cd StOpt
+    	   $env:CIBW_ENVIRONMENT = "CMAKE_PREFIX_PATH=C:\\deps PATH=C:\\deps\\bin;$Env:PATH"
+    	   cibuildwheel --platform windows --output-dir ../wheelhouse  
 
       # ==========================================================================
       # ARTIFACTS
