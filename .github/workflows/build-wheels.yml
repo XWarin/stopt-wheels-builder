@@ -8,90 +8,101 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} for Python ${{ matrix.python }}
+    name: Build wheels on ${{ matrix.os }} (Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - name: Checkout wheel builder repo
-        uses: actions/checkout@v4
+      # -------------------------------------------------------------------
+      # 1) Checkout du repo wheel-builder
+      # -------------------------------------------------------------------
+      - uses: actions/checkout@v4
 
-      - name: Clone StOpt from GitLab
+      # -------------------------------------------------------------------
+      # 2) Clone StOpt depuis GitLab
+      # -------------------------------------------------------------------
+      - name: Clone StOpt
         run: |
           git clone https://gitlab.com/stochastic-control/StOpt.git
 
+      # -------------------------------------------------------------------
+      # 3) Setup Python
+      # -------------------------------------------------------------------
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
+      # -------------------------------------------------------------------
+      # 4) Installer cibuildwheel
+      # -------------------------------------------------------------------
       - name: Install cibuildwheel
         run: |
+          pip install --upgrade pip
           pip install cibuildwheel
 
-      # ==========================================================================
-      # LINUX : installation dans le CONTENEUR MANYLINUX
-      # ==========================================================================
+      # ===================================================================
+      # 5) LINUX : install des dépendances dans le CONTENEUR manylinux
+      # ===================================================================
       - name: Build wheels (Linux)
-       if: runner.os == 'Linux'
-       run: |
-        cd StOpt
-    	CIBW_BEFORE_ALL_LINUX="echo '=== Installing Eigen ===' \
-      	&& curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz \
-      	&& tar -xzf eigen.tar.gz \
-      	&& cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps \
-      	&& cmake --build eigen-build --target install \
-      	&& echo '=== Installing COIN-OR ===' \
-      	&& yum install -y coin-or-Clp-devel coin-or-Osi-devel \
-      	&& echo '=== Installing Boost ===' \
-      	&& yum install -y boost-devel \
-      	&& echo '=== Installing OpenMPI ===' \
-      	&& yum install -y openmpi-devel" \
-    	CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
-    	cibuildwheel --platform linux --output-dir ../wheelhouse     - name: Build wheels (Linux)
-       
+        if: runner.os == 'Linux'
+        run: |
+          cd StOpt
+          CIBW_BEFORE_ALL_LINUX="echo '=== Installing Eigen ===' \
+            && curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz \
+            && tar -xzf eigen.tar.gz \
+            && cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps \
+            && cmake --build eigen-build --target install \
+            && echo '=== Installing COIN-OR ===' \
+            && yum install -y coin-or-Clp-devel coin-or-Osi-devel \
+            && echo '=== Installing Boost ===' \
+            && yum install -y boost-devel \
+            && echo '=== Installing OpenMPI ===' \
+            && yum install -y openmpi-devel" \
+          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
+          cibuildwheel --platform linux --output-dir ../wheelhouse
 
-      # ==========================================================================
-      # MACOS (brew)
-      # ==========================================================================
+      # ===================================================================
+      # 6) macOS : install via Homebrew
+      # ===================================================================
       - name: Build wheels (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew update
-        brew install eigen boost openmpi coin-or-tools-clp coin-or-tools-osi
-      	cd StOpt
-      	CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix) LDFLAGS=-Wl,-rpath,@loader_path" \
-      	cibuildwheel --platform macos --output-dir ../wheelhouse      - name: Build wheels (macOS)
- 
-      # ==========================================================================
-      # WINDOWS (choco + compilation Eigen)
-      # ==========================================================================
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install eigen boost openmpi coin-or-tools-clp coin-or-tools-osi
+          cd StOpt
+          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix) LDFLAGS=-Wl,-rpath,@loader_path" \
+          cibuildwheel --platform macos --output-dir ../wheelhouse
+
+      # ===================================================================
+      # 7) Windows : Boost + CoinMP + Eigen (compilé localement)
+      # ===================================================================
       - name: Build wheels (Windows)
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-      	   choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
-    	   choco install boost-msvc-14.3 -y
-    	   choco install coinmp -y
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
+          choco install boost-msvc-14.3 -y
+          choco install coinmp -y
 
-    	   mkdir C:\deps
-    	   Invoke-WebRequest -OutFile eigen.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
-    	   Expand-Archive eigen.zip -DestinationPath .
-    	   cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
-    	   cmake --build eigen-build --config Release --target install
+          mkdir C:\deps
+          Invoke-WebRequest -OutFile eigen.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
+          Expand-Archive eigen.zip -DestinationPath .
+          cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
+          cmake --build eigen-build --config Release --target install
 
-    	   cd StOpt
-    	   $env:CIBW_ENVIRONMENT = "CMAKE_PREFIX_PATH=C:\\deps PATH=C:\\deps\\bin;$Env:PATH"
-    	   cibuildwheel --platform windows --output-dir ../wheelhouse  
+          cd StOpt
+          $env:CIBW_ENVIRONMENT = "CMAKE_PREFIX_PATH=C:\\deps PATH=C:\\deps\\bin;$Env:PATH"
+          cibuildwheel --platform windows --output-dir ../wheelhouse
 
-      # ==========================================================================
-      # ARTIFACTS
-      # ==========================================================================
+      # ===================================================================
+      # 8) Artifacts des wheels
+      # ===================================================================
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
