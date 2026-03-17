@@ -3,7 +3,7 @@ name: Build Wheels for StOpt
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
   pull_request:
 
 jobs:
