@@ -9,20 +9,44 @@ jobs:
   build_wheels:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    # Correction critique : cibuildwheel lit les env ici (pas dans les steps)
+    env:
+      CIBW_BUILD: "cp310-* cp311-* cp312-*"
+      CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
+
+      # CORRECTION LINUX : scikit-build-core utilise le bon Python
+      CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
+
+      # Windows — inchangé
+      CIBW_ENVIRONMENT_WINDOWS: >
+        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+        VCPKG_FEATURE_FLAGS=-manifests
+        BUILD_MPI=OFF
+        BUILD_TEST=OFF
+        BUILD_SDDP=OFF
+        BUILD_DPCUTS=OFF
+        BUILD_BRANCHING=OFF
+
+      # macOS — variables
+      CIBW_ARCHS_MACOS: "x86_64"
+      CIBW_ENVIRONMENT_MACOS: >
+        MACOSX_DEPLOYMENT_TARGET=10.15
+        Boost_NO_BOOST_CMAKE=ON
 
     steps:
+      ###########################################################################
+      # Checkout code
+      ###########################################################################
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
+
       ###########################################################################
-      # WINDOWS : préparer vcpkg dans la source AVANT cibuildwheel
+      # WINDOWS : préparer vcpkg avant build
       ###########################################################################
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
@@ -31,28 +55,26 @@ jobs:
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-      ###########################################################################
-      # Installer cibuildwheel (NE PAS installer pybind11 / numpy / pip deps !)
-      ###########################################################################
-      - name: Install cibuildwheel
-        run: |
-          pip install cibuildwheel==2.17.0
-        shell: bash
+
 
       ###########################################################################
-      # Construire wheels
+      # Installer cibuildwheel (ne pas installer pybind11/numpy ici !)
+      ###########################################################################
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==2.17.0
+        shell: bash
+
+
+      ###########################################################################
+      # BUILD wheels
       ###########################################################################
       - name: Build wheels
         run: |
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
-
-          CIBW_BUILD: "cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
-
           #######################################################################
-          # LINUX : Manylinux + Eigen 3.4 + Boost 1.84
+          # LINUX : Eigen 3.4 + Boost 1.84
           #######################################################################
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
@@ -71,49 +93,31 @@ jobs:
                 threading=multi link=shared &&
             cd .. && rm -rf boost_1_84_0*
 
-          CIBW_ENVIRONMENT_LINUX: >
-           SKBUILD_PYTHON_INTERPRETER={python}
-
           #######################################################################
-          # MACOS : utiliser Homebrew (Boost complet, Eigen, Zlib, BZip2)
+          # MACOS : Homebrew Boost + Eigen + Zlib + BZip2
           #######################################################################
           CIBW_BEFORE_ALL_MACOS: >
             brew update &&
             brew install boost eigen cmake zlib bzip2
 
-          CIBW_ARCHS_MACOS: "x86_64"
-
-          CIBW_ENVIRONMENT_MACOS: >
-            MACOSX_DEPLOYMENT_TARGET=10.15
-            Boost_NO_BOOST_CMAKE=ON
-
+          #  Correction MAJEURE macOS : installer StOpt + geners AVANT delocate
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            delocate-wheel -v -w {dest_dir} {wheel}  
+            cmake --install build --prefix {dest_dir}/pystopt &&
+            delocate-wheel -v -w {dest_dir} {wheel}
 
           #######################################################################
-          # WINDOWS : utiliser vcpkg comme simple toolchain (aucune install)
+          # WINDOWS : réparer avec delvewheel
           #######################################################################
-          CIBW_ENVIRONMENT_WINDOWS: >
-            CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
-            VCPKG_FEATURE_FLAGS=-manifests
-            BUILD_MPI=OFF
-            BUILD_TEST=OFF
-            BUILD_SDDP=OFF
-            BUILD_DPCUTS=OFF
-            BUILD_BRANCHING=OFF
-
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair -w {dest_dir} {wheel}
 
+
       ###########################################################################
-      # Debug
+      # Debug & Upload
       ###########################################################################
       - name: Debug wheelhouse
         run: ls -R .
 
-      ###########################################################################
-      # Upload
-      ###########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
