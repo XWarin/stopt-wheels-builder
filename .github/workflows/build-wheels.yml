@@ -72,27 +72,20 @@ jobs:
             cd .. && rm -rf boost_1_84_0*
 
           #######################################################################
-          # MACOS : Eigen + Boost compilé manuellement (wheel complet)
+          # MACOS : utiliser Homebrew (Boost complet, Eigen, Zlib, BZip2)
           #######################################################################
           CIBW_BEFORE_ALL_MACOS: >
             brew update &&
-            brew install eigen cmake zlib bzip2 &&
-            wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
-            tar -xzf boost_1_84_0.tar.gz &&
-            cd boost_1_84_0 && ./bootstrap.sh &&
-            ./b2 install --prefix=/usr/local
-                --with-serialization --with-system --with-random
-                --with-log --with-thread --with-chrono --with-atomic
-                threading=multi link=shared &&
-            cd .. && rm -rf boost_1_84_0*
+            brew install boost eigen cmake zlib bzip2
 
           CIBW_ARCHS_MACOS: "x86_64"
 
           CIBW_ENVIRONMENT_MACOS: >
             MACOSX_DEPLOYMENT_TARGET=10.15
+            Boost_NO_BOOST_CMAKE=ON
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            delocate-wheel -v -w {dest_dir} {wheel}
+            delocate-wheel -v -w {dest_dir} {wheel}  
 
           #######################################################################
           # WINDOWS : utiliser vcpkg comme simple toolchain (aucune install)
