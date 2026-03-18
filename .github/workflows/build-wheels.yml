@@ -24,7 +24,7 @@ jobs:
 
       # Correction Windows
       CIBW_ARCHS_WINDOWS: "AMD64"
-      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests BUILD_MPI=OFF BUILD_TEST=OFF BUILD_SDDP=OFF BUILD_DPCUTS=OFF BUILD_BRANCHING=OFF"
+      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=CMAKE_TOOLCHAIN_FILE=D:/a/stopt-wheels-builder/stopt-wheels-builder/StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests BUILD_MPI=OFF BUILD_TEST=OFF BUILD_SDDP=OFF BUILD_DPCUTS=OFF BUILD_BRANCHING=OFF"
 
       # Correction macOS
       CIBW_ARCHS_MACOS: "x86_64"
@@ -48,7 +48,22 @@ jobs:
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-
+          #  the needed libs
+          .\vcpkg\vcpkg.exe install `
+            pybind11 `
+            boost-multi-array `
+            boost-timer `
+            boost-test `
+            boost-random `
+            boost-chrono `
+            boost-system `
+            boost-log `
+            boost-serialization `
+            eigen3 `
+            coin-or-osi `
+            coin-or-clp `
+            --triplet x64-windows
+	  
       - name: Install cibuildwheel
         run: pip install cibuildwheel==2.17.0
 
