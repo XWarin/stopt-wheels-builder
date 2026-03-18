@@ -1,4 +1,4 @@
-name: Build Wheels for StOpt (Eigen + Boost + pybind11)
+name: Build Wheels for StOpt (Eigen + Boost 1.84.0 + pybind11)
 
 on:
   workflow_dispatch:
@@ -15,48 +15,34 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ "3.12"]
+        python: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      # ============================================================
-      # 1) Checkout
-      # ============================================================
       - uses: actions/checkout@v4
 
-      # ============================================================
-      # 2) Clone StOpt
-      # ============================================================
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
-      # ============================================================
-      # 3) Setup Python
-      # ============================================================
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
-      # ============================================================
-      # 4) Install cibuildwheel + tools
-      # ============================================================
-      - name: Install build tools (cibuildwheel + pybind11 + cmake + ninja)
+      - name: Install build tools
         run: |
           pip install --upgrade pip
           pip install cibuildwheel pybind11 cmake ninja
 
       ########################################################################
-      # LINUX — external build script (Eigen + Boost)
+      # LINUX
       ########################################################################
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
         run: |
           cd StOpt
 
-          # -----------------------
-          # Create Linux dependency script
-          # -----------------------
-          cat > build_deps_linux.sh << 'EOF'
+          # Create script
+          cat << 'EOF' > build_deps_linux.sh
 #!/bin/bash
 set -ex
 
@@ -66,46 +52,29 @@ tar -xzf eigen.tar.gz
 cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps
 cmake --build eigen-build --target install --config Release
 
-echo "=== Download Boost 1.84.0 ==="
+echo "=== Build Boost 1.84.0 ==="
 curl -L -o boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
 tar -xzf boost.tar.gz
 cd boost_1_84_0
-
-echo "=== Bootstrap Boost ==="
 ./bootstrap.sh --prefix=/project/deps --without-libraries=python
-
-echo "=== Build required Boost libs ==="
-./b2 install \
-    --with-chrono \
-    --with-thread \
-    --with-log \
-    --with-timer \
-    --with-serialization \
-    --with-system \
-    --with-test \
-    -j$(nproc)
-
+./b2 install --with-chrono --with-thread --with-log --with-timer --with-serialization --with-system --with-test -j$(nproc)
 EOF
 
           chmod +x build_deps_linux.sh
 
-          # -----------------------
           # cibuildwheel
-          # -----------------------
           CIBW_BEFORE_ALL_LINUX="./build_deps_linux.sh" \
-          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
+          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:\$LD_LIBRARY_PATH" \
           cibuildwheel --platform linux --output-dir ../wheelhouse
 
       ########################################################################
-      # macOS — external script (Eigen + Boost via brew)
+      # MACOS
       ########################################################################
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         run: |
-          # -----------------------
-          # Create macOS dependency script
-          # -----------------------
-          cat > build_deps_macos.sh << 'EOF'
+          # Create script
+          cat << 'EOF' > build_deps_macos.sh
 #!/bin/bash
 set -ex
 
@@ -115,9 +84,8 @@ brew update
 echo "=== Install Eigen ==="
 brew install eigen
 
-echo "=== Install Boost (compiled) ==="
+echo "=== Install Boost ==="
 brew install boost
-
 EOF
 
           chmod +x build_deps_macos.sh
@@ -128,31 +96,27 @@ EOF
           cibuildwheel --platform macos --output-dir ../wheelhouse
 
       ########################################################################
-      # WINDOWS — external script (Eigen + Boost compiled)
+      # WINDOWS
       ########################################################################
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          # -----------------------
-          # Create dependency script
-          # -----------------------
-          Set-Content build_deps_windows.ps1 @"
-Write-Host '=== Install Eigen 3.4.0 ==='
+          # Create script
+          @"
+Write-Host '=== Build Eigen 3.4.0 ==='
 Invoke-WebRequest -OutFile eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
 tar -xzf eigen.tar.gz
 cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
 cmake --build eigen-build --config Release --target install
 
-Write-Host '=== Download Boost 1.84.0 ==='
+Write-Host '=== Build Boost 1.84.0 ==='
 Invoke-WebRequest -OutFile boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
 tar -xzf boost.tar.gz
 cd boost_1_84_0
 
-Write-Host '=== Bootstrap Boost ==='
 .\bootstrap.bat --prefix=C:\deps --without-libraries=python
 
-Write-Host '=== Build Boost libs ==='
 .\b2 install `
     --with-chrono `
     --with-thread `
@@ -164,16 +128,12 @@ Write-Host '=== Build Boost libs ==='
     -j4
 
 cd ..
-"@
+"@ | Set-Content build_deps_windows.ps1
 
-          # -----------------------
-          # Install tools
-          # -----------------------
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install ninja -y
           mkdir C:\deps
 
-          # Run dependency script
           powershell -ExecutionPolicy Bypass -File build_deps_windows.ps1
 
           cd StOpt
@@ -181,7 +141,7 @@ cd ..
           cibuildwheel --platform windows --output-dir ../wheelhouse
 
       ########################################################################
-      # Upload artifacts
+      # UPLOAD ARTIFACTS
       ########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
