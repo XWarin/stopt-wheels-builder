@@ -10,38 +10,59 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
+    ###########################################################################
+    # Correct order: strategy → env → steps
+    ###########################################################################
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     env:
+      # cibuildwheel Pythons
       CIBW_BUILD: "cp310-* cp311-* cp312-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
-      # Linux fix
+      ###########################################################################
+      # Linux fix — scikit-build-core MUST use proper Python
+      ###########################################################################
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
 
-      # Windows fix + toolchain (attention: un seul CMAKE_TOOLCHAIN_FILE=)
+      ###########################################################################
+      # Windows — disable manifest mode + force toolchain
+      ###########################################################################
       CIBW_ARCHS_WINDOWS: "AMD64"
       CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests BUILD_MPI=OFF BUILD_TEST=OFF BUILD_SDDP=OFF BUILD_DPCUTS=OFF BUILD_BRANCHING=OFF"
 
+      ###########################################################################
       # macOS
+      ###########################################################################
       CIBW_ARCHS_MACOS: "x86_64"
       CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=10.15 Boost_NO_BOOST_CMAKE=ON"
 
     steps:
 
+      ###########################################################################
+      # Checkout code
+      ###########################################################################
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup Python 3.10 for cibuildwheel driver
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
+      ###########################################################################
+      # Setup Python 3.10 → cibuildwheel driver (Linux + macOS only)
+      ###########################################################################
+      - name: Setup Python 3.10 driver
+        if: runner.os != 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      ###########################################################################
+      # Windows → prepare vcpkg but DO NOT install manifest deps
+      ###########################################################################
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -50,19 +71,34 @@ jobs:
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-          # 2. LA SOLUTION : On supprime le manifest pour forcer le mode classique
-          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }      
-          .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows 
-
-      - name: Install cibuildwheel
+         if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }      
+          .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
+	  
+      ###########################################################################
+      # Install cibuildwheel
+      ###########################################################################
+      - name: Install cibuildwheel (Linux/macOS)
+        if: runner.os != 'Windows'
         run: python -m pip install cibuildwheel==2.17.0
 
-      - name: Build wheels
+      - name: Install cibuildwheel (Windows)
+        if: runner.os == 'Windows'
+        run: pip install cibuildwheel==2.17.0
+
+      ###########################################################################
+      # BUILD WHEELS
+      ###########################################################################
+      - name: Build wheels (Linux & macOS)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           cd StOpt
-          cibuildwheel --output-dir ../wheelhouse
+          python -m cibuildwheel --output-dir ../wheelhouse
         env:
 
+          #######################################################################
+          # LINUX — Boost + Eigen installation
+          #######################################################################
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
             wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
@@ -77,16 +113,36 @@ jobs:
             ./bootstrap.sh &&
             ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
 
+          #######################################################################
+          # MACOS — Boost via Homebrew
+          #######################################################################
           CIBW_BEFORE_ALL_MACOS: >
             brew update &&
             brew install boost eigen cmake zlib bzip2
 
+          #######################################################################
+          # macOS — delocate
+          #######################################################################
+          # Note: You removed cmake --install manually; we keep your version.
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-wheel -v -w {dest_dir} {wheel}
 
+      ###########################################################################
+      # Windows cibuildwheel
+      ###########################################################################
+      - name: Build wheels (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd StOpt
+          cibuildwheel --output-dir ../wheelhouse
+        env:
+          CIBW_BEFORE_ALL_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
 
+      ###########################################################################
+      # Upload
+      ###########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
