@@ -81,7 +81,8 @@ jobs:
             && cd .. \
           " \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
-          cibuildwheel --platform linux --output-dir ../wheelhouse
+	  CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform linux --output-dir ../wheelhouse
+
 
       ########################################################################
       # 6) macOS : brew install Eigen + Boost (déjà compilé)
@@ -93,7 +94,7 @@ jobs:
           brew install eigen boost
           cd StOpt
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix)" \
-          cibuildwheel --platform macos --output-dir ../wheelhouse
+          CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform macos --output-dir ../wheelhouse
 
       ########################################################################
       # 7) Windows : Eigen compiled + Boost compiled (same modules as Linux)
@@ -119,7 +120,7 @@ jobs:
           # Boost 1.84.0
           # ---------------------
           Invoke-WebRequest -OutFile boost.zip https://boostorg.jfrog.io/artifactory/main/release/1.84.0/source/boost_1_84_0.zip
-          Expand-Archive boost.zip -DestinationPath .
+          tar -xzf boost.tar.gz
           cd boost_1_84_0
 
           .\bootstrap.bat --prefix=C:\deps
