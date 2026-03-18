@@ -37,32 +37,38 @@ jobs:
           cd StOpt
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
-          CIBW_BUILD: "cp311-* cp312-*"
+          CIBW_BUILD: " cp311-* cp312-*"
           CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
-          # ===== LINUX (manylinux + Boost 1.84 manually compiled) =====
+          # ===== LINUX (manylinux: install Eigen 3.4 + Boost 1.84) =====
           CIBW_BEFORE_ALL_LINUX: >
-            yum install -y wget python3-devel eigen3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
+            yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
+            wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
+            tar -xzf eigen-3.4.0.tar.gz &&
+            cd eigen-3.4.0 &&
+            cmake -B build -DCMAKE_INSTALL_PREFIX=/usr &&
+            cmake --build build --target install &&
+            cd .. && rm -rf eigen-3.4.0* &&
             wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
             tar -xzf boost_1_84_0.tar.gz &&
             cd boost_1_84_0 && ./bootstrap.sh &&
             ./b2 install --prefix=/usr/local
-              --with-serialization --with-system --with-random
-              --with-log --with-thread --with-chrono --with-atomic
-              threading=multi link=shared &&
+                --with-serialization --with-system --with-random
+                --with-log --with-thread --with-chrono --with-atomic
+                threading=multi link=shared &&
             cd .. && rm -rf boost_1_84_0*
 
-          # ===== MACOS =====
-          CIBW_BEFORE_ALL_MACOS: brew install boost eigen cmake
+          # ===== MACOS (brew: ensures Eigen 3.4+, Boost, CMake) =====
+          CIBW_BEFORE_ALL_MACOS: >
+            brew update &&
+            brew install eigen cmake boost
           CIBW_ARCHS_MACOS: "x86_64"
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-wheel --ignore-missing-dependencies -w {dest_dir} {wheel}
 
-          # ===== WINDOWS (vcpkg manifest mode) =====
+          # ===== WINDOWS (vcpkg preinstalled + manifest mode) =====
           CIBW_BEFORE_ALL_WINDOWS: >
-            git clone https://github.com/microsoft/vcpkg C:/vcpkg &&
-            C:/vcpkg/bootstrap-vcpkg.bat &&
             C:/vcpkg/vcpkg.exe install --triplet x64-windows
 
           CIBW_ENVIRONMENT_WINDOWS: >
