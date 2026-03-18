@@ -75,12 +75,15 @@ jobs:
             delocate-wheel --ignore-missing-dependencies -w {dest_dir} {wheel}
 
           #######################################################################
-          # WINDOWS : vcpkg préinstallé / manifest mode
-          # Désactivation MPI + COIN-OR + tests (sinon CMake échoue)
+          # WINDOWS : fresh vcpkg repo + manifest mode
+          # Désactivation MPI / tests / COIN-OR pour wheels
           #######################################################################
           CIBW_BEFORE_ALL_WINDOWS: >
+            rd /s /q C:\vcpkg || true &&
+            git clone https://github.com/microsoft/vcpkg C:\vcpkg &&
+            C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics &&
             cd StOpt &&
-            C:/vcpkg/vcpkg.exe install --triplet x64-windows
+            C:\vcpkg\vcpkg.exe install --triplet x64-windows
 
           CIBW_ENVIRONMENT_WINDOWS: >
             CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -100,7 +103,7 @@ jobs:
         run: ls -R .
 
       ###########################################################################
-      # Upload wheels (robuste : capture tous les wheels peu importe où placés)
+      # Upload wheels (robuste : capture tous les wheels)
       ###########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
