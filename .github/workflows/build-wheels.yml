@@ -1,4 +1,4 @@
-name: Build Wheels for StOpt
+name: Build Wheels for StOpt (Boost 1.84 + Log)
 
 on:
   workflow_dispatch:
@@ -7,12 +7,11 @@ on:
 
 jobs:
   build_wheels:
-    name: Build ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # On laisse cibuildwheel gérer les versions de python en interne
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -27,28 +26,49 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.17.0
+      - name: Install build tools
+        run: |
+          pip install cibuildwheel==2.17.0
+          if [ "${{ runner.os }}" == "Windows" ]; then pip install delvewheel; fi
+        shell: bash
 
       - name: Build wheels
         run: |
           cd StOpt
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
-          # Configuration générale
-          CIBW_BUILD: "cp312-*" # Force Python 3.12 uniquement
-          
-          # Linux : On installe les dépendances dans le container manylinux
-          CIBW_BEFORE_ALL_LINUX: yum install -y boost-devel cmake eigen3-devel
+          CIBW_BUILD: "cp310-* cp311-* cp312-*"
+          CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
-          # macOS : Installation via Brew
+          # --- LINUX (Compilation Boost 1.84 complète pour Log/Random/Serialization) ---
+          CIBW_BEFORE_ALL_LINUX: >
+            yum install -y wget python3-devel eigen3-devel cmake make gcc-c++ hdf5-devel zlib-devel bzip2-devel &&
+            wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
+            tar -xzf boost_1_84_0.tar.gz &&
+            cd boost_1_84_0 && ./bootstrap.sh && 
+            ./b2 install --prefix=/usr/local \
+                --with-serialization --with-system --with-random \
+                --with-log --with-thread --with-chrono --with-atomic \
+                threading=multi link=shared &&
+            cd .. && rm -rf boost_1_84_0*
+
+          # --- MACOS ---
           CIBW_BEFORE_ALL_MACOS: brew install boost eigen cmake
+          CIBW_ARCHS_MACOS: "x86_64"
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --ignore-missing-dependencies -w {dest_dir} {wheel}"
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
 
-          # Windows : Utilisation des outils pré-installés
-          CIBW_BEFORE_ALL_WINDOWS: pip install delvewheel
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair -w {dest_dir} {wheel}"
+          # --- WINDOWS (Utilisation de Vcpkg pour Boost 1.84) ---
+          CIBW_BEFORE_ALL_WINDOWS: >
+            vcpkg install boost-serialization boost-random boost-log boost-system --triplet x64-windows
           
+          # On indique à CMake où vcpkg a installé les libs
+          CIBW_ENVIRONMENT_WINDOWS: >
+            CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+            CMAKE_PREFIX_PATH=C:/deps
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --add-path C:\\vcpkg\\installed\\x64-windows\\bin -w {dest_dir} {wheel}"
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
