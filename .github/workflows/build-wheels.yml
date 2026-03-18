@@ -92,6 +92,7 @@ jobs:
           #######################################################################
           CIBW_ENVIRONMENT_WINDOWS: >
             CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+	    VCPKG_FEATURE_FLAGS=-manifests
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
