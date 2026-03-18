@@ -1,14 +1,13 @@
-name: Build Wheels for StOpt (Eigen + Boost 1.84.0 + pybind11)
+name: Build Wheels for StOpt
 
 on:
   workflow_dispatch:
   push:
     branches: [ master ]
-  pull_request:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} for Python ${{ matrix.python }}
+    name: Build ${{ matrix.os }} (py${{ matrix.python }})
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -28,121 +27,42 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install build tools
+      - name: Install tools
         run: |
           pip install --upgrade pip
           pip install cibuildwheel pybind11 cmake ninja
 
-      ########################################################################
-      # LINUX
-      ########################################################################
+      # Linux
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
         run: |
           cd StOpt
-
-          # Create script
-          cat << 'EOF' > build_deps_linux.sh
-#!/bin/bash
-set -ex
-
-echo "=== Build Eigen 3.4.0 ==="
-curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-tar -xzf eigen.tar.gz
-cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps
-cmake --build eigen-build --target install --config Release
-
-echo "=== Build Boost 1.84.0 ==="
-curl -L -o boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
-tar -xzf boost.tar.gz
-cd boost_1_84_0
-./bootstrap.sh --prefix=/project/deps --without-libraries=python
-./b2 install --with-chrono --with-thread --with-log --with-timer --with-serialization --with-system --with-test -j$(nproc)
-EOF
-
-          chmod +x build_deps_linux.sh
-
-          # cibuildwheel
-          CIBW_BEFORE_ALL_LINUX="./build_deps_linux.sh" \
+          CIBW_BEFORE_ALL_LINUX="../scripts/build_deps_linux.sh" \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:\$LD_LIBRARY_PATH" \
           cibuildwheel --platform linux --output-dir ../wheelhouse
 
-      ########################################################################
-      # MACOS
-      ########################################################################
+      # macOS
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         run: |
-          # Create script
-          cat << 'EOF' > build_deps_macos.sh
-#!/bin/bash
-set -ex
-
-echo "=== brew update ==="
-brew update
-
-echo "=== Install Eigen ==="
-brew install eigen
-
-echo "=== Install Boost ==="
-brew install boost
-EOF
-
-          chmod +x build_deps_macos.sh
-
           cd StOpt
-          CIBW_BEFORE_ALL_MACOS="../build_deps_macos.sh" \
+          CIBW_BEFORE_ALL_MACOS="../scripts/build_deps_macos.sh" \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix)" \
           cibuildwheel --platform macos --output-dir ../wheelhouse
 
-      ########################################################################
-      # WINDOWS
-      ########################################################################
+      # Windows
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          # Create script
-          @"
-Write-Host '=== Build Eigen 3.4.0 ==='
-Invoke-WebRequest -OutFile eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-tar -xzf eigen.tar.gz
-cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
-cmake --build eigen-build --config Release --target install
-
-Write-Host '=== Build Boost 1.84.0 ==='
-Invoke-WebRequest -OutFile boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
-tar -xzf boost.tar.gz
-cd boost_1_84_0
-
-.\bootstrap.bat --prefix=C:\deps --without-libraries=python
-
-.\b2 install `
-    --with-chrono `
-    --with-thread `
-    --with-log `
-    --with-timer `
-    --with-serialization `
-    --with-system `
-    --with-test `
-    -j4
-
-cd ..
-"@ | Set-Content build_deps_windows.ps1
-
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install ninja -y
           mkdir C:\deps
-
-          powershell -ExecutionPolicy Bypass -File build_deps_windows.ps1
-
           cd StOpt
+          $env:CIBW_BEFORE_ALL_WINDOWS = "..\\scripts\\build_deps_windows.ps1"
           $env:CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=C:\deps PATH=C:\deps\bin;$Env:PATH"
-          cibuildwheel --platform windows --output-dir ../wheelhouse
+          cibuildwheel --platform windows --output-dir ..\wheelhouse
 
-      ########################################################################
-      # UPLOAD ARTIFACTS
-      ########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
