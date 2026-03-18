@@ -34,6 +34,10 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Setup Python 3.10 for cibuildwheel driver
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
@@ -51,7 +55,7 @@ jobs:
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows 
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.17.0
+        run: python -m pip install cibuildwheel==2.17.0
 
       - name: Build wheels
         run: |
