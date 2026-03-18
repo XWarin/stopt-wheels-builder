@@ -71,6 +71,9 @@ jobs:
                 threading=multi link=shared &&
             cd .. && rm -rf boost_1_84_0*
 
+          CIBW_ENVIRONMENT_LINUX: >
+           SKBUILD_PYTHON_INTERPRETER={python}
+
           #######################################################################
           # MACOS : utiliser Homebrew (Boost complet, Eigen, Zlib, BZip2)
           #######################################################################
