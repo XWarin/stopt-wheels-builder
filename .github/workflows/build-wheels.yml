@@ -1,4 +1,4 @@
-name: Build Wheels for StOpt (Boost 1.84.0 + Eigen 3.4.0 + pybind11)
+name: Build Wheels for StOpt (Eigen + Boost + pybind11)
 
 on:
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       # ============================================================
-      # 4) Install cibuildwheel + pybind11 + cmake + ninja
+      # 4) Install cibuildwheel + tools
       # ============================================================
       - name: Install build tools (cibuildwheel + pybind11 + cmake + ninja)
         run: |
@@ -46,125 +46,142 @@ jobs:
           pip install cibuildwheel pybind11 cmake ninja
 
       ########################################################################
-      # 5) LINUX : Eigen + Boost compiled (chrono, thread, log, timer, serialization, system, test)
+      # LINUX — external build script (Eigen + Boost)
       ########################################################################
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
         run: |
           cd StOpt
 
-          CIBW_BEFORE_ALL_LINUX=" set -ex \
-            echo '=== Build Eigen ===' \
-            && curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz \
-            && tar -xzf eigen.tar.gz \
-            && cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps \
-            && cmake --build eigen-build --target install --config Release \
-            \
-            && echo '=== Download Boost 1.84.0 ===' \
-            && curl -L -o boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz \
-            && tar -xzf boost.tar.gz \
-            && cd boost_1_84_0 \
-            \
-            && echo '=== Bootstrap Boost ===' \
-            && ./bootstrap.sh --prefix=/project/deps \
-            \
-            && echo '=== Build required Boost modules ===' \
-            && ./b2 install \
-                --with-chrono \
-                --with-thread \
-                --with-log \
-                --with-timer \
-                --with-serialization \
-                --with-system \
-                --with-test \
-                -j$(nproc) \
-            && cd .. \
-          " \
-          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
-          CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform linux --output-dir ../wheelhouse
+          # -----------------------
+          # Create Linux dependency script
+          # -----------------------
+          cat > build_deps_linux.sh << 'EOF'
+#!/bin/bash
+set -ex
 
+echo "=== Build Eigen 3.4.0 ==="
+curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+tar -xzf eigen.tar.gz
+cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=/project/deps
+cmake --build eigen-build --target install --config Release
+
+echo "=== Download Boost 1.84.0 ==="
+curl -L -o boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
+tar -xzf boost.tar.gz
+cd boost_1_84_0
+
+echo "=== Bootstrap Boost ==="
+./bootstrap.sh --prefix=/project/deps --without-libraries=python
+
+echo "=== Build required Boost libs ==="
+./b2 install \
+    --with-chrono \
+    --with-thread \
+    --with-log \
+    --with-timer \
+    --with-serialization \
+    --with-system \
+    --with-test \
+    -j$(nproc)
+
+EOF
+
+          chmod +x build_deps_linux.sh
+
+          # -----------------------
+          # cibuildwheel
+          # -----------------------
+          CIBW_BEFORE_ALL_LINUX="./build_deps_linux.sh" \
+          CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
+          cibuildwheel --platform linux --output-dir ../wheelhouse
 
       ########################################################################
-      # 6) macOS : brew install Eigen + Boost (déjà compilé)
+      # macOS — external script (Eigen + Boost via brew)
       ########################################################################
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         run: |
-           # -----------------------
-           # Créer le script externe
-           # -----------------------
-           cat > build_deps_macos.sh << 'EOF'
+          # -----------------------
+          # Create macOS dependency script
+          # -----------------------
+          cat > build_deps_macos.sh << 'EOF'
 #!/bin/bash
 set -ex
 
 echo "=== brew update ==="
 brew update
 
-echo "=== Installing Eigen ==="
+echo "=== Install Eigen ==="
 brew install eigen
 
-echo "=== Installing Boost ==="
+echo "=== Install Boost (compiled) ==="
 brew install boost
 
 EOF
 
-           chmod +x build_deps_macos.sh
+          chmod +x build_deps_macos.sh
 
-           # -----------------------
-           # Exécuter cibuildwheel
-           # -----------------------
-           cd StOpt
+          cd StOpt
           CIBW_BEFORE_ALL_MACOS="../build_deps_macos.sh" \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix)" \
-          cibuildwheel --platform macos --output-dir ../wheelhouse      - name: Build wheels (macOS)
+          cibuildwheel --platform macos --output-dir ../wheelhouse
 
       ########################################################################
-      # 7) Windows : Eigen compiled + Boost compiled (same modules as Linux)
+      # WINDOWS — external script (Eigen + Boost compiled)
       ########################################################################
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
+          # -----------------------
+          # Create dependency script
+          # -----------------------
+          Set-Content build_deps_windows.ps1 @"
+Write-Host '=== Install Eigen 3.4.0 ==='
+Invoke-WebRequest -OutFile eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+tar -xzf eigen.tar.gz
+cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
+cmake --build eigen-build --config Release --target install
+
+Write-Host '=== Download Boost 1.84.0 ==='
+Invoke-WebRequest -OutFile boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz
+tar -xzf boost.tar.gz
+cd boost_1_84_0
+
+Write-Host '=== Bootstrap Boost ==='
+.\bootstrap.bat --prefix=C:\deps --without-libraries=python
+
+Write-Host '=== Build Boost libs ==='
+.\b2 install `
+    --with-chrono `
+    --with-thread `
+    --with-log `
+    --with-timer `
+    --with-serialization `
+    --with-system `
+    --with-test `
+    -j4
+
+cd ..
+"@
+
+          # -----------------------
+          # Install tools
+          # -----------------------
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install ninja -y
-
           mkdir C:\deps
 
-          # ---------------------
-          # Eigen
-          # ---------------------
-          Invoke-WebRequest -OutFile eigen.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
-          Expand-Archive eigen.zip -DestinationPath .
-          cmake -S eigen-3.4.0 -B eigen-build -DCMAKE_INSTALL_PREFIX=C:\deps
-          cmake --build eigen-build --config Release --target install
+          # Run dependency script
+          powershell -ExecutionPolicy Bypass -File build_deps_windows.ps1
 
-          # ---------------------
-          # Boost 1.84.0
-          # ---------------------
-          Invoke-WebRequest -OutFile boost.zip  https://archives.boost.io/release/1.84.0/source/boost_1_84_0.zip
-          Expand-Archive boost.zip -DestinationPath .
-          cd boost_1_84_0
-
-          .\bootstrap.bat --prefix=C:\deps
-
-          .\b2 install `
-              --with-chrono `
-              --with-thread `
-              --with-log `
-              --with-timer `
-              --with-serialization `
-              --with-system `
-              --with-test `
-              -j4
-
-          cd ..\StOpt
-
-          # Build wheels
+          cd StOpt
           $env:CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=C:\deps PATH=C:\deps\bin;$Env:PATH"
           cibuildwheel --platform windows --output-dir ../wheelhouse
 
       ########################################################################
-      # 8) Artifacts
+      # Upload artifacts
       ########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
