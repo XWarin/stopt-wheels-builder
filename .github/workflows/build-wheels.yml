@@ -73,7 +73,7 @@ jobs:
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }      
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
-	  
+
       ###########################################################################
       # Install cibuildwheel
       ###########################################################################
