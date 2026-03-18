@@ -53,7 +53,7 @@ jobs:
         run: |
           cd StOpt
 
-          CIBW_BEFORE_ALL_LINUX=" \
+          CIBW_BEFORE_ALL_LINUX=" set -ex \
             echo '=== Build Eigen ===' \
             && curl -L -o eigen.tar.gz https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz \
             && tar -xzf eigen.tar.gz \
@@ -61,7 +61,7 @@ jobs:
             && cmake --build eigen-build --target install --config Release \
             \
             && echo '=== Download Boost 1.84.0 ===' \
-            && curl -L -o boost.tar.gz https://boostorg.jfrog.io/artifactory/main/release/1.84.0/source/boost_1_84_0.tar.gz \
+            && curl -L -o boost.tar.gz https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz \
             && tar -xzf boost.tar.gz \
             && cd boost_1_84_0 \
             \
@@ -90,11 +90,33 @@ jobs:
       - name: Build wheels (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew update
-          brew install eigen boost
-          cd StOpt
+           # -----------------------
+           # Créer le script externe
+           # -----------------------
+           cat > build_deps_macos.sh << 'EOF'
+#!/bin/bash
+set -ex
+
+echo "=== brew update ==="
+brew update
+
+echo "=== Installing Eigen ==="
+brew install eigen
+
+echo "=== Installing Boost ==="
+brew install boost
+
+EOF
+
+           chmod +x build_deps_macos.sh
+
+           # -----------------------
+           # Exécuter cibuildwheel
+           # -----------------------
+           cd StOpt
+          CIBW_BEFORE_ALL_MACOS="../build_deps_macos.sh" \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix)" \
-          CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform macos --output-dir ../wheelhouse
+          cibuildwheel --platform macos --output-dir ../wheelhouse      - name: Build wheels (macOS)
 
       ########################################################################
       # 7) Windows : Eigen compiled + Boost compiled (same modules as Linux)
@@ -119,8 +141,8 @@ jobs:
           # ---------------------
           # Boost 1.84.0
           # ---------------------
-          Invoke-WebRequest -OutFile boost.zip https://boostorg.jfrog.io/artifactory/main/release/1.84.0/source/boost_1_84_0.zip
-          tar -xzf boost.tar.gz
+          Invoke-WebRequest -OutFile boost.zip  https://archives.boost.io/release/1.84.0/source/boost_1_84_0.zip
+          Expand-Archive boost.zip -DestinationPath .
           cd boost_1_84_0
 
           .\bootstrap.bat --prefix=C:\deps
