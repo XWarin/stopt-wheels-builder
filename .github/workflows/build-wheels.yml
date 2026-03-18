@@ -47,6 +47,7 @@ jobs:
         run: |
           cd StOpt
           CIBW_BEFORE_ALL_MACOS="../scripts/build_deps_macos.sh" \
+	  CIBW_ARCHS_MACOS="x86_64" \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=$(brew --prefix)" \
           cibuildwheel --platform macos --output-dir ../wheelhouse
 
