@@ -81,7 +81,7 @@ jobs:
             && cd .. \
           " \
           CIBW_ENVIRONMENT="CMAKE_PREFIX_PATH=/project/deps LD_LIBRARY_PATH=/project/deps/lib:$LD_LIBRARY_PATH" \
-	  CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform linux --output-dir ../wheelhouse
+          CIBW_BUILD_VERBOSITY=3 cibuildwheel --platform linux --output-dir ../wheelhouse
 
 
       ########################################################################
