@@ -75,15 +75,13 @@ jobs:
             delocate-wheel --ignore-missing-dependencies -w {dest_dir} {wheel}
 
           #######################################################################
-          # WINDOWS : vcpkg local au projet + manifest mode
-          # (MPI / tests / COIN désactivés par variables CMake)
+          # WINDOWS : utiliser vcpkg comme simple toolchain, mais NE RIEN INSTALLER
           #######################################################################
           CIBW_BEFORE_ALL_WINDOWS: >
             cd StOpt &&
             rd /s /q vcpkg || true &&
             git clone https://github.com/microsoft/vcpkg vcpkg &&
-            vcpkg\bootstrap-vcpkg.bat -disableMetrics &&
-            vcpkg\vcpkg.exe install --triplet x64-windows
+            vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
           CIBW_ENVIRONMENT_WINDOWS: >
             CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -94,7 +92,7 @@ jobs:
             BUILD_BRANCHING=OFF
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair -w {dest_dir} {wheel} --add-path .\vcpkg\installed\x64-windows\bin
+            delvewheel repair -w {dest_dir} {wheel}  
 
 
       ###########################################################################
