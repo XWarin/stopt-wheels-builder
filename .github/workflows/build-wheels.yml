@@ -19,20 +19,11 @@ jobs:
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
 
       # Windows — inchangé
-      CIBW_ENVIRONMENT_WINDOWS: >
-        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
-        VCPKG_FEATURE_FLAGS=-manifests
-        BUILD_MPI=OFF
-        BUILD_TEST=OFF
-        BUILD_SDDP=OFF
-        BUILD_DPCUTS=OFF
-        BUILD_BRANCHING=OFF
+      CIBW_ENVIRONMENT_WINDOWS: CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests   BUILD_MPI=OFF   BUILD_TEST=OFF  BUILD_SDDP=OFF  BUILD_DPCUTS=OFF    BUILD_BRANCHING=OFF
 
       # macOS — variables
       CIBW_ARCHS_MACOS: "x86_64"
-      CIBW_ENVIRONMENT_MACOS: >
-        MACOSX_DEPLOYMENT_TARGET=10.15
-        Boost_NO_BOOST_CMAKE=ON
+      CIBW_ENVIRONMENT_MACOS:  MACOSX_DEPLOYMENT_TARGET=10.15   Boost_NO_BOOST_CMAKE=ON
 
     steps:
       ###########################################################################
