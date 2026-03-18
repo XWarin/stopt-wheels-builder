@@ -24,15 +24,22 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
       ###########################################################################
-      # Linux fix — scikit-build-core MUST use proper Python
+      # Linux — scikit-build-core MUST use proper Python
       ###########################################################################
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
 
       ###########################################################################
-      # Windows — disable manifest mode + force toolchain
+      # Windows — FIXED (block mapping, not single-line string)
       ###########################################################################
       CIBW_ARCHS_WINDOWS: "AMD64"
-      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests BUILD_MPI=OFF BUILD_TEST=OFF BUILD_SDDP=OFF BUILD_DPCUTS=OFF BUILD_BRANCHING=OFF"
+      CIBW_ENVIRONMENT_WINDOWS: >
+        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+        VCPKG_FEATURE_FLAGS=-manifests
+        BUILD_MPI=OFF
+        BUILD_TEST=OFF
+        BUILD_SDDP=OFF
+        BUILD_DPCUTS=OFF
+        BUILD_BRANCHING=OFF
 
       ###########################################################################
       # macOS
@@ -61,7 +68,7 @@ jobs:
           python-version: "3.10"
 
       ###########################################################################
-      # Windows → prepare vcpkg but DO NOT install manifest deps
+      # WINDOWS : prepare vcpkg (WITHOUT manifest install)
       ###########################################################################
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
@@ -71,7 +78,7 @@ jobs:
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }      
+          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
 
       ###########################################################################
@@ -86,7 +93,7 @@ jobs:
         run: pip install cibuildwheel==2.17.0
 
       ###########################################################################
-      # BUILD WHEELS
+      # BUILD WHEELS — Linux & macOS
       ###########################################################################
       - name: Build wheels (Linux & macOS)
         if: runner.os != 'Windows'
@@ -123,12 +130,11 @@ jobs:
           #######################################################################
           # macOS — delocate
           #######################################################################
-          # Note: You removed cmake --install manually; we keep your version.
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-wheel -v -w {dest_dir} {wheel}
 
       ###########################################################################
-      # Windows cibuildwheel
+      # BUILD WHEELS — Windows
       ###########################################################################
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
