@@ -120,4 +120,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
-          path: "**/*.whl
+          path: "**/*.whl"
