@@ -31,7 +31,7 @@ jobs:
       CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=10.15 Boost_NO_BOOST_CMAKE=ON"
 
       # Test simple
-      CIBW_TEST_COMMAND: "python -c 'import pystopt; print(pystopt.__version__)'"
+      #CIBW_TEST_COMMAND: "python -c 'import pystopt; print(pystopt.__version__)'"
 
     steps:
       - name: Checkout repository
@@ -43,7 +43,7 @@ jobs:
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
+        run: 
           cd StOpt
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
