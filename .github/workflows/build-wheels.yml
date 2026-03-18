@@ -37,7 +37,7 @@ jobs:
           cd StOpt
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
-v
+
           CIBW_BUILD: "cp310-* cp311-* cp312-*"
           CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
