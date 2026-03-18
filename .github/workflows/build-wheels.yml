@@ -50,7 +50,7 @@ jobs:
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
           #  the needed libs
           .\vcpkg\vcpkg.exe install  pybind11   boost-multi-array   boost-timer   boost-test   boost-random   boost-chrono   boost-system   boost-log   boost-serialization   eigen3   coin-or-osi   coin-or-clp   --triplet x64-windows
-	  
+
       - name: Install cibuildwheel
         run: pip install cibuildwheel==2.17.0
 
