@@ -21,6 +21,17 @@ jobs:
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
+      ###########################################################################
+      # WINDOWS : préparer vcpkg dans la source AVANT cibuildwheel
+      ###########################################################################
+      - name: Prepare vcpkg for Windows
+        if: runner.os == 'Windows'
+        run: |
+          cd StOpt
+          rd /s /q vcpkg || true
+          git clone https://github.com/microsoft/vcpkg vcpkg
+          vcpkg\bootstrap-vcpkg.bat -disableMetrics
+
       - name: Install cibuildwheel + pybind11
         run: |
           pip install cibuildwheel==2.17.0
@@ -70,14 +81,8 @@ jobs:
             delocate-wheel --ignore-missing-dependencies -w {dest_dir} {wheel}
 
           #######################################################################
-          # WINDOWS : utiliser vcpkg comme simple toolchain, mais NE RIEN INSTALLER
+          # WINDOWS : utiliser vcpkg comme simple toolchain, sans installation
           #######################################################################
-          CIBW_BEFORE_ALL_WINDOWS: >
-            cd StOpt &&
-            rd /s /q vcpkg || true &&
-            git clone https://github.com/microsoft/vcpkg vcpkg &&
-            vcpkg\bootstrap-vcpkg.bat -disableMetrics
-
           CIBW_ENVIRONMENT_WINDOWS: >
             CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
             BUILD_MPI=OFF
@@ -89,15 +94,14 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair -w {dest_dir} {wheel}  
 
-
       ###########################################################################
-      # Debug: print wheelhouse content
+      # Debug
       ###########################################################################
       - name: Debug wheelhouse
         run: ls -R .
 
       ###########################################################################
-      # Upload wheels (robuste : capture tous les wheels)
+      # Upload wheels
       ###########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
