@@ -21,11 +21,6 @@ jobs:
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
       - name: Install cibuildwheel + pybind11
         run: |
           pip install cibuildwheel==2.17.0
@@ -35,7 +30,7 @@ jobs:
       - name: Build wheels
         run: |
           cd StOpt
-          python -m cibuildwheel --output-dir ../wheelhouse
+          cibuildwheel --output-dir ../wheelhouse
         env:
 
           CIBW_BUILD: "cp310-* cp311-* cp312-*"
