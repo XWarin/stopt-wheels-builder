@@ -9,69 +9,56 @@ jobs:
   build_wheels:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-
+    
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
-    # Correction critique : cibuildwheel lit les env ici (pas dans les steps)
     env:
       CIBW_BUILD: "cp310-* cp311-* cp312-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
-      # CORRECTION LINUX : scikit-build-core utilise le bon Python
+      # Correction Linux : scikit-build-core utilise le bon Python
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
 
-      # Windows — inchangé
-      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests   BUILD_MPI=OFF   BUILD_TEST=OFF  BUILD_SDDP=OFF  BUILD_DPCUTS=OFF    BUILD_BRANCHING=OFF"
+      # Correction Windows
+      CIBW_ARCHS_WINDOWS: "AMD64"
+      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests BUILD_MPI=OFF BUILD_TEST=OFF BUILD_SDDP=OFF BUILD_DPCUTS=OFF BUILD_BRANCHING=OFF"
 
-      # macOS — variables
+      # Correction macOS
       CIBW_ARCHS_MACOS: "x86_64"
-      CIBW_ENVIRONMENT_MACOS:  "MACOSX_DEPLOYMENT_TARGET=10.15   Boost_NO_BOOST_CMAKE=ON"
+      CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=10.15 Boost_NO_BOOST_CMAKE=ON"
+
+      # Test simple
+      CIBW_TEST_COMMAND: "python -c 'import pystopt; print(pystopt.__version__)'"
 
     steps:
-      ###########################################################################
-      # Checkout code
-      ###########################################################################
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
-
-      ###########################################################################
-      # WINDOWS : préparer vcpkg avant build
-      ###########################################################################
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           cd StOpt
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
-
-      ###########################################################################
-      # Installer cibuildwheel (ne pas installer pybind11/numpy ici !)
-      ###########################################################################
       - name: Install cibuildwheel
         run: pip install cibuildwheel==2.17.0
-        shell: bash
 
-
-      ###########################################################################
-      # BUILD wheels
-      ###########################################################################
       - name: Build wheels
         run: |
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
-          #######################################################################
-          # LINUX : Eigen 3.4 + Boost 1.84
-          #######################################################################
+
+          # Linux
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
             wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
@@ -79,43 +66,29 @@ jobs:
             cd eigen-3.4.0 &&
             cmake -B build -DCMAKE_INSTALL_PREFIX=/usr &&
             cmake --build build --target install &&
-            cd .. && rm -rf eigen-3.4.0* &&
+            cd .. &&
             wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
             tar -xzf boost_1_84_0.tar.gz &&
-            cd boost_1_84_0 && ./bootstrap.sh &&
-            ./b2 install --prefix=/usr/local
-                --with-serialization --with-system --with-random
-                --with-log --with-thread --with-chrono --with-atomic
-                threading=multi link=shared &&
-            cd .. && rm -rf boost_1_84_0*
+            cd boost_1_84_0 &&
+            ./bootstrap.sh &&
+            ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
 
-          #######################################################################
-          # MACOS : Homebrew Boost + Eigen + Zlib + BZip2
-          #######################################################################
+          # macOS
           CIBW_BEFORE_ALL_MACOS: >
             brew update &&
             brew install boost eigen cmake zlib bzip2
 
-          #  Correction MAJEURE macOS : installer StOpt + geners AVANT delocate
+          #  On installe les dylibs AVANT delocate
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            cmake --install build --prefix {dest_dir}/pystopt &&
+            #cmake --install build --prefix {dest_dir}/pystopt &&
             delocate-wheel -v -w {dest_dir} {wheel}
 
-          #######################################################################
-          # WINDOWS : réparer avec delvewheel
-          #######################################################################
+          # Windows
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair -w {dest_dir} {wheel}
-
-
-      ###########################################################################
-      # Debug & Upload
-      ###########################################################################
-      - name: Debug wheelhouse
-        run: ls -R .
+            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
-          path: "**/*.whl"
+          path: ./wheelhouse/*.whl
