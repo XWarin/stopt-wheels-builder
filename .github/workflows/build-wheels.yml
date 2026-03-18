@@ -46,8 +46,8 @@ jobs:
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-          # On entre dans le dossier vcpkg pour perdre de vue le vcpkg.json du projet
-          cd vcpkg
+          # 2. LA SOLUTION : On supprime le manifest pour forcer le mode classique
+          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }      
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows 
 
       - name: Install cibuildwheel
