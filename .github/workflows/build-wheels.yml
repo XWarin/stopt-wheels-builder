@@ -151,7 +151,7 @@ jobs:
           ###########################################################################
           # macOS — delocate (REPAIR)   
           ###########################################################################
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
                                            mkdir -p tmpdir &&
                                            unzip {wheel} -d tmpdir &&
                                            bash build_utils/fix_stopt_macos_libs.sh tmpdir/pystopt &&
