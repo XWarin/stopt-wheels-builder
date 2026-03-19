@@ -149,7 +149,9 @@ jobs:
                                  -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
                                  -DCMAKE_MACOSX_RPATH=ON
                                  -DBUILD_SHARED_LIBS=ON
-
+                                 -DBoost_USE_STATIC_LIBS=ON 
+                                 -DBoost_USE_SHARED_LIBS=OFF
+                                 
           CIBW_BEFORE_ALL_MACOS: "brew install boost eigen cmake zlib bzip2"
 
  
@@ -157,14 +159,15 @@ jobs:
           # macOS — delocate (REPAIR)   
           ###########################################################################
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
-          #     bash utils/repair_macos_wheel.sh {wheel} {dest_dir} 
+          #     bash utils/repair_macos_wheel.sh {wheel} {dest_dir}
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             TMPDIR=$(mktemp -d) &&
             unzip {wheel} -d "$TMPDIR" &&
+            TARGET_LIB=$(find "$TMPDIR" -name "libStOpt.dylib") &&
+            echo "--- DIAGNOSTIC AVANT RÉPARATION ---" &&
+            otool -L "$TARGET_LIB" &&
             bash utils/fix_stopt_macos_libs.sh "$TMPDIR" &&
-            (cd "$TMPDIR" && zip -r -9 "{wheel}" .) &&
-            rm -rf "$TMPDIR" &&
-            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} {wheel}     ``
+            echo "--- DIAGNOSTIC APRÈS RÉPARATION ---" 
 
 
 
