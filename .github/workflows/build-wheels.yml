@@ -174,20 +174,20 @@ jobs:
           #  echo "--- CONTENU DE LA ROUE BRUTE ---" &&
           #  unzip -l {wheel} &&
           #  delocate-wheel -v -w {dest_dir} {wheel}
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            echo "--- EXTRACTING WHEEL ---" &&
-            TMPDIR=$(mktemp -d) &&
-            unzip {wheel} -d "$TMPDIR" &&
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |-
+                                           echo "--- EXTRACTING WHEEL ---"
+                                           TMPDIR=$(mktemp -d)                           
+                                           unzip {wheel} -d "$TMPDIR"
 
-            echo "--- COPYING DYLIBS FROM _skbuild INTO WHEEL/pystopt/ ---" &&
-            find _skbuild -name "*.dylib" -exec cp {} "$TMPDIR/pystopt/" \; &&
+                                           echo "--- COPYING DYLIBS FROM _skbuild INTO WHEEL/pystopt/ ---"
+                                           find _skbuild -name "*.dylib" -exec cp {} "$TMPDIR/pystopt/" \;
 
-            echo "--- REPACKING WHEEL ---" &&
-            (cd "$TMPDIR" && zip -qr ../fixed.whl .) &&
-            mv "$TMPDIR/../fixed.whl" {wheel} &&
- 
-            echo "--- Running DELOCATE ---" &&
-            delocate-wheel --require-archs x86_64 -v -w {dest_dir} {wheel}          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+                                           echo "--- REPACKING WHEEL ---"
+                                           (cd "$TMPDIR" && zip -qr ../fixed.whl .)
+                                           mv "$TMPDIR/../fixed.whl" {wheel}
+
+                                           echo "--- Running DELOCATE ---"
+                                           delocate-wheel --require-archs x86_64 -v -w {dest_dir} {wheel}
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #  # 1. On localise où sont les dylibs dans le build directory de scikit-build
