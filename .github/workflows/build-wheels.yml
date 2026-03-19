@@ -16,7 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ macos-latest]
 
     env:
       # cibuildwheel Pythons
@@ -175,6 +176,22 @@ jobs:
             dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
             echo "NuGet Python not found" 
 
+          CIBW_TEST_COMMAND_MACOS: >
+            python - << 'EOF'
+            import pystopt
+            import sys
+            import os
+            import pathlib
+
+            print("========= DEBUG MACOS BUILD =========")
+            print("pystopt loaded from:", pathlib.Path(pystopt.__file__).parent)
+
+            p = pathlib.Path(pystopt.__file__).parent
+            for f in p.iterdir():
+              print(" -", f)
+
+            print("========= DONE =========")
+            EOF
           CIBW_BEFORE_ALL_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
