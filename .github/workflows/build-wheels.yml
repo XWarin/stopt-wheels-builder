@@ -175,8 +175,12 @@ jobs:
           #  unzip -l {wheel} &&
           #  delocate-wheel -v -w {dest_dir} {wheel}        
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-             DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:/usr/local/lib:$(pwd)/pystopt:$(pwd)/_skbuild/macos-x86_64/stable/cmake_install/pystopt 
-             delocate-wheel --require-archs {delocate_archs} -v --lib-sana-path=pystopt -w {dest_dir} {wheel}
+            # 1. On localise où sont les dylibs dans le build directory de scikit-build
+            # On cherche récursivement car le chemin peut varier selon la version de python
+            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd)/_skbuild -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -):/usr/local/lib &&
+            echo "DYLD_LIBRARY_PATH est réglé sur: $DYLD_LIBRARY_PATH" &&
+            # 2. On répare la wheel
+            delocate-wheel --require-archs {delocate_archs} -v -w {dest_dir} {wheel}
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
