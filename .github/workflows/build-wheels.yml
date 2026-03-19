@@ -138,7 +138,7 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >
             echo "===== DEBUG: SKBUILD DIR =====" &&
             ls -R _skbuild || true &&
-            echo "===== INSTALLING DYLIBS INTO pystopt/ =====" &&
+            echo "===== INSTALLING DYLIBS INTO pystopt/ =====" 
 
           #######################################################################
           # macOS — delocate
