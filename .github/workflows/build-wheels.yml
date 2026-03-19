@@ -1,38 +1,3 @@
- Je développe un projet sur github pour générer des fichiers pip à partir de c++
-
-Mon fichier yml fonctionne sur linux.
-
-Sous mc-os, la wheel est généré correctement:
-
-Il contient les bonnes librairies:
-
-228 03-19-2026 11:23 pystopt/__init__.py
-
-3584376 03-19-2026 11:26 pystopt/libStOpt.dylib
-
-241088 03-19-2026 11:26 pystopt/libgeners.dylib
-
-1597528 03-19-2026 11:26 pystopt/pystopt.cpython-310-darwin.so
-
-Associée au projet https://gitlab.com/stochastic-control/StOpt
-
-Seulment la phase de repair échoue.
-
-ERROR:delocate.libsana:
-
-@rpath/libgeners.dylib not found:
-
-Needed by: /private/var/folders/t5/f77_gwnj6p95qxy9py3fckx00000gn/T/tmpor582mro/wheel/pystopt/libStOpt.dylib
-
-ERROR:delocate.libsana:
-
-@rpath/libgeners.dylib not found:
-
-Needed by: /private/var/folders/t5/f77_gwnj6p95qxy9py3fckx00000gn/T/tmpor582mro/wheel/pystopt/libStOpt.dylib
-
-Search path:
-
-Voilà le yml à corriger: il faut extraire les *dlib et les déplacer pour que le delocate fonctionne:
 
 name: Build Wheels for StOpt (Boost 1.84 + Eigen 3.4 + pybind11)
 
