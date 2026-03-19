@@ -145,7 +145,7 @@ jobs:
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             delocate-wheel -v -w {dest_dir} {wheel}
-	    
+
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
           #   cp build/geners/libgeners.dylib {project}/pystopt/ &&
