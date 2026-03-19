@@ -159,16 +159,17 @@ jobs:
           # macOS — delocate (REPAIR)   
           ###########################################################################
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
-          #     bash utils/repair_macos_wheel.sh {wheel} {dest_dir}
+          #     bash utils/repair_macos_wheel.sh {wheel} {dest_dir} 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            export WHEEL_PATH={wheel} &&
             TMPDIR=$(mktemp -d) &&
-            unzip {wheel} -d "$TMPDIR" &&
-            TARGET_LIB=$(find "$TMPDIR" -name "libStOpt.dylib") &&
-            echo "--- DIAGNOSTIC AVANT RÉPARATION ---" &&
-            otool -L "$TARGET_LIB" &&
+            unzip "$WHEEL_PATH" -d "$TMPDIR" &&
             bash utils/fix_stopt_macos_libs.sh "$TMPDIR" &&
-            echo "--- DIAGNOSTIC APRÈS RÉPARATION ---" 
-
+            (cd "$TMPDIR" && zip -r -9 "$(basename $WHEEL_PATH)" .) &&
+            mv "$TMPDIR/$(basename $WHEEL_PATH)" "$WHEEL_PATH" &&
+            rm -rf "$TMPDIR" &&
+            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH" &&
+            ls -lh {dest_dir}/*.whl
 
 
       ###########################################################################
@@ -193,7 +194,10 @@ jobs:
           CIBW_BEFORE_ALL_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
-
+          CIBW_TEST_COMMAND: >
+                             python -c "import pystopt; print('Import OK'); 
+                             print('Test fonctionnel OK')"
+                             
       ###########################################################################
       # Upload
       ###########################################################################
