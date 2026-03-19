@@ -165,11 +165,8 @@ jobs:
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            # On liste pour debugger si besoin
-            ls -R . && 
-            # On aide delocate en lui donnant le dossier de package comme source de libs
-            DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(pwd)/StOpt/pystopt:$(pwd)/pystopt 
-            delocate-wheel -v -w {dest_dir} {wheel}
+            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(pwd)/StOpt/pystopt:$(pwd)/pystopt &&
+            delocate-wheel -v -w {dest_dir} {wheel}  
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
