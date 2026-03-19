@@ -65,7 +65,11 @@ jobs:
       
     steps:
 
-      ###########################################################################
+    - name: Make macOS scripts executable
+      run: |
+         chmod +x StOpt/utils/*.sh
+         
+    ###########################################################################
       # Checkout code
       ###########################################################################
       - name: Checkout repository
@@ -151,8 +155,8 @@ jobs:
           ###########################################################################
           # macOS — delocate (REPAIR)   
           ###########################################################################
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-               bash build_utils/repair_macos_wheel.sh {wheel} {dest_dir}
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
+               bash utils/repair_macos_wheel.sh {wheel} {dest_dir} 
                ``
 
 
