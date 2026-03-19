@@ -164,7 +164,7 @@ jobs:
             bash utils/fix_stopt_macos_libs.sh "$TMPDIR" &&
             (cd "$TMPDIR" && zip -r -9 "{wheel}" .) &&
             rm -rf "$TMPDIR" &&
-            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} {wheel}   ``
+            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} {wheel}     ``
 
 
 
