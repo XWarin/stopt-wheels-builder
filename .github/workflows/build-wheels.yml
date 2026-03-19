@@ -32,16 +32,19 @@ jobs:
       # Windows — FIXED (block mapping, not single-line string)
       ###########################################################################
       CIBW_ARCHS_WINDOWS: "AMD64"
+      #CIBW_ENVIRONMENT_WINDOWS: >
+      #  CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+      #  VCPKG_FEATURE_FLAGS=-manifests
+      #  BUILD_MPI=OFF
+      #  BUILD_TEST=OFF
+      #  BUILD_SDDP=OFF
+      #  BUILD_DPCUTS=OFF
+      #  BUILD_BRANCHING=OFF
       CIBW_ENVIRONMENT_WINDOWS: >
-        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
-        VCPKG_FEATURE_FLAGS=-manifests
-        BUILD_MPI=OFF
-        BUILD_TEST=OFF
-        BUILD_SDDP=OFF
-        BUILD_DPCUTS=OFF
-        BUILD_BRANCHING=OFF
+       CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+       VCPKG_FEATURE_FLAGS=-manifests
 
-      CIBW_CMAKE_ARGS_WINDOWS: "-DPython_EXECUTABLE={python}"
+      CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DPython_EXECUTABLE={python}"
       
       ###########################################################################
       # macOS
@@ -158,6 +161,19 @@ jobs:
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            echo "==== DEBUG WINDOWS ENV ====" &&
+            env &&
+            echo "==== PYTHON PATHS ====" &&
+            where python &&
+            python --version &&
+            echo "==== SEARCHING Python libs ====" &&
+            dir C:\hostedtoolcache\windows\Python\* /b /s ||
+            echo "Python libs not found in hostedtoolcache" &&
+            echo "==== SEARCHING NuGet Python ====" &&
+            dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
+            echo "NuGet Python not found" 
+
           CIBW_BEFORE_ALL_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
