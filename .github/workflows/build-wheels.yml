@@ -190,8 +190,20 @@ jobs:
 
           #  echo "--- RUNNING DELOCATE ---"
           #  delocate-wheel --require-archs x86_64 -v -w {dest_dir} {wheel}    
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel -v --lib-sdir pystopt -w {dest_dir} {wheel}"
-
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            # 1. On crée un dossier temporaire pour travailler sur le contenu de la wheel
+            mkdir -p ./tmp_wheel && unzip {wheel} -d ./tmp_wheel &&
+            
+            # 2. On ajoute explicitement @loader_path au RPATH de libStOpt.dylib
+            # Cela dit au binaire de chercher ses dépendances dans le même dossier que lui
+            install_name_tool -add_rpath "@loader_path/." ./tmp_wheel/pystopt/libStOpt.dylib || true &&
+            
+            # 3. On reconstruit la wheel temporairement
+            (cd ./tmp_wheel && zip -r ../{wheel} .) &&
+            
+            # 4. Maintenant delocate va comprendre où chercher car le rpath est valide
+            delocate-wheel -v -w {dest_dir} {wheel}
+            
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #  # 1. On localise où sont les dylibs dans le build directory de scikit-build
           #  # On cherche récursivement car le chemin peut varier selon la version de python
