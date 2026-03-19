@@ -52,7 +52,6 @@ jobs:
         CXX=/usr/bin/clang++ 
         MACOSX_DEPLOYMENT_TARGET=10.15 
         Boost_NO_BOOST_CMAKE=ON 
-        CMAKE_INSTALL_RPATH="@loader_path/."
 
       #  Installation automatique des libs C++ dans le wheel (TOUS OS)
       SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
@@ -140,85 +139,21 @@ jobs:
           #######################################################################
           # MACOS — Boost via Homebrew
           #######################################################################
-          # On aide CMake à placer les bons chemins internes dans les dylibs
-          CIBW_CMAKE_ARGS_MACOS: "-DCMAKE_INSTALL_RPATH='@loader_path/.' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON"
+          CIBW_CMAKE_ARGS_MACOS: >
+                                 -DCMAKE_INSTALL_RPATH="@loader_path/."
+                                 -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+                                 -DCMAKE_MACOSX_RPATH=ON
+                                 -DBUILD_SHARED_LIBS=ON
 
           CIBW_BEFORE_ALL_MACOS: "brew install boost eigen cmake zlib bzip2"
-          #CIBW_BEFORE_ALL_MACOS: >
-          #  brew update &&
-          #  brew install boost eigen cmake zlib bzip2
 
-          CIBW_BEFORE_BUILD_MACOS: >
-            echo "===== DEBUG: SKBUILD DIR =====" &&
-            ls -R _skbuild || true &&
-            echo "===== INSTALLING DYLIBS INTO pystopt/ =====" 
-
-          CIBW_TEST_COMMAND_MACOS: >
-            python - << 'EOF'
-            import pystopt
-            import sys
-            import os
-            import pathlib
-
-            print("========= DEBUG MACOS BUILD =========")
-            print("pystopt loaded from:", pathlib.Path(pystopt.__file__).parent)
-
-            p = pathlib.Path(pystopt.__file__).parent
-            for f in p.iterdir():
-              print(" -", f)
-
-            print("========= DONE =========")
-            EOF
-
-          #######################################################################
-          # macOS — delocate
-          #######################################################################
-          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          #  export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd) -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -) &&
-          #  echo "--- LISTING DES DYLIBS TROUVEES ---" &&
-          #  find . -name "*.dylib" &&
-          #  echo "--- CONTENU DE LA ROUE BRUTE ---" &&
-          #  unzip -l {wheel} &&
-          #  delocate-wheel -v -w {dest_dir} {wheel}
-          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: |-
-          #  echo "--                                 - EXTRACTING WHEEL ---"
-          #  TMPDIR=$(mktemp -d)                      
-          #  unzip {wheel} -d "$TMPDIR"               
-          #  echo "--- REPACKING WHEEL ---"
-          #  (cd "$TMPDIR" && zip -qr ../fixed.whl .)
-          #  mv "$TMPDIR/../fixed.whl" {wheel}
-
-          #  echo "--- RUNNING DELOCATE ---"
-          #  delocate-wheel --require-archs x86_64 -v -w {dest_dir} {wheel}    
+          # REPAIR : On dit à delocate de chercher Boost dans le système ET 
+          # de regarder dans le dossier pystopt de la wheel pour libgeners
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            # 1. On crée un dossier temporaire pour travailler sur le contenu de la wheel
-            mkdir -p ./tmp_wheel && unzip {wheel} -d ./tmp_wheel &&
-            
-            # 2. On ajoute explicitement @loader_path au RPATH de libStOpt.dylib
-            # Cela dit au binaire de chercher ses dépendances dans le même dossier que lui
-            install_name_tool -add_rpath "@loader_path/." ./tmp_wheel/pystopt/libStOpt.dylib || true &&
-            
-            # 3. On reconstruit la wheel temporairement
-            (cd ./tmp_wheel && zip -r ../{wheel} .) &&
-            
-            # 4. Maintenant delocate va comprendre où chercher car le rpath est valide
-            delocate-wheel -v -w {dest_dir} {wheel}
-            
-          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          #  # 1. On localise où sont les dylibs dans le build directory de scikit-build
-          #  # On cherche récursivement car le chemin peut varier selon la version de python
-          #  export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd)/_skbuild -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -):/usr/local/lib &&
-          #  echo "DYLD_LIBRARY_PATH est réglé sur: $DYLD_LIBRARY_PATH" &&
-          #  # 2. On répare la wheel
-          #  delocate-wheel --require-archs {delocate_archs} -v -w {dest_dir} {wheel}
+                                           delocate-wheel -v 
+                                           --lib-sdir pystopt --require-archs x86_64
+                                           --require-archs {delocate_archs}  
 
-          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          #   cp build/libStOpt.dylib {project}/pystopt/ &&
-          #   cp build/geners/libgeners.dylib {project}/pystopt/ &&
-          #   delocate-wheel -v -w {dest_dir} {wheel}
-          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-          #  cmake --install build --prefix {project}/pystopt &&
-          #  delocate-wheel -v -w {dest_dir} {wheel}
 
       ###########################################################################
       # BUILD WHEELS — Windows
