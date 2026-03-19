@@ -133,8 +133,8 @@ jobs:
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            cmake --install build --prefix {project}/pystopt &&
             delocate-wheel -v -w {dest_dir} {wheel}
-
       ###########################################################################
       # BUILD WHEELS — Windows
       ###########################################################################
