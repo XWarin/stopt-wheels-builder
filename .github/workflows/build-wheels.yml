@@ -170,7 +170,7 @@ jobs:
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd) -name "*.dylib" -exec dirname {} + | sort -u | tr '\n' ':') &&            delocate-wheel -v -w {dest_dir} {wheel}
+            delocate-wheel --check-dirs -v -w {dest_dir} {wheel}
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
@@ -195,9 +195,6 @@ jobs:
             echo "==== PYTHON PATHS ====" &&
             where python &&
             python --version &&
-            echo "==== SEARCHING Python libs ====" &&
-            dir C:\hostedtoolcache\windows\Python\* /b /s ||
-            echo "Python libs not found in hostedtoolcache" &&
             echo "==== SEARCHING NuGet Python ====" &&
             dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
             echo "NuGet Python not found" 
