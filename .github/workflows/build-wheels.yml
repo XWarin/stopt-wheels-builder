@@ -41,6 +41,8 @@ jobs:
         BUILD_DPCUTS=OFF
         BUILD_BRANCHING=OFF
 
+      CIBW_CMAKE_ARGS_WINDOWS: "-DPython_EXECUTABLE={python}"
+      
       ###########################################################################
       # macOS
       ###########################################################################
