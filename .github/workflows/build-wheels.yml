@@ -151,13 +151,9 @@ jobs:
           ###########################################################################
           # macOS — delocate (REPAIR)   
           ###########################################################################
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
-                                           mkdir -p tmpdir &&
-                                           unzip {wheel} -d tmpdir &&
-                                           bash build_utils/fix_stopt_macos_libs.sh tmpdir/pystopt &&
-                                           # déplace les dépendances supplémentaires trouvées dans /opt/homebrew vers la wheel
-                                           delocate-listdeps --all --depending tmpdir | xargs -I {} cp {} tmpdir/pystopt/ || true &&
-                                           delocate-wheel -v --lib-sdir pystopt --require-archs x86_64 -w {dest_dir} {wheel}CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+               bash build_utils/repair_macos_wheel.sh {wheel} {dest_dir}
+               ``
 
 
 
@@ -175,7 +171,7 @@ jobs:
             env &&
             echo "==== PYTHON PATHS ====" &&
             where python &&
-            python --version &&
+            python --version && 
             echo "==== SEARCHING NuGet Python ====" &&
             dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
             echo "NuGet Python not found" 
