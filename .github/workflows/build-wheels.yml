@@ -1,4 +1,436 @@
+ Je développe un projet sur github pour générer des fichiers pip à partir de c++
+
+Mon fichier yml fonctionne sur linux.
+
+Sous mc-os, la wheel est généré correctement:
+
+Il contient les bonnes librairies:
+
+228 03-19-2026 11:23 pystopt/__init__.py
+
+3584376 03-19-2026 11:26 pystopt/libStOpt.dylib
+
+241088 03-19-2026 11:26 pystopt/libgeners.dylib
+
+1597528 03-19-2026 11:26 pystopt/pystopt.cpython-310-darwin.so
+
+Associée au projet https://gitlab.com/stochastic-control/StOpt
+
+Seulment la phase de repair échoue.
+
+ERROR:delocate.libsana:
+
+@rpath/libgeners.dylib not found:
+
+Needed by: /private/var/folders/t5/f77_gwnj6p95qxy9py3fckx00000gn/T/tmpor582mro/wheel/pystopt/libStOpt.dylib
+
+ERROR:delocate.libsana:
+
+@rpath/libgeners.dylib not found:
+
+Needed by: /private/var/folders/t5/f77_gwnj6p95qxy9py3fckx00000gn/T/tmpor582mro/wheel/pystopt/libStOpt.dylib
+
+Search path:
+
+Voilà le yml à corriger: il faut extraire les *dlib et les déplacer pour que le delocate fonctionne:
+
 name: Build Wheels for StOpt (Boost 1.84 + Eigen 3.4 + pybind11)
+
+
+on:
+
+  workflow_dispatch:
+
+  push:
+
+    branches: [ master ]
+
+
+jobs:
+
+  build_wheels:
+
+    name: Build on ${{ matrix.os }}
+
+    runs-on: ${{ matrix.os }}
+
+
+    ###########################################################################
+
+    # Correct order: strategy → env → steps
+
+    ###########################################################################
+
+    strategy:
+
+      fail-fast: false
+
+      matrix:
+
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+
+        os: [ macos-latest]
+
+
+    env:
+
+      # cibuildwheel Pythons
+
+      #CIBW_BUILD: "cp310-* cp311-* cp312-*"
+
+      CIBW_BUILD: "cp310-*"
+
+      CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
+
+
+      ###########################################################################
+
+      # Linux — scikit-build-core MUST use proper Python
+
+      ###########################################################################
+
+      CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
+
+
+      ###########################################################################
+
+      # Windows — FIXED (block mapping, not single-line string)
+
+      ###########################################################################
+
+      CIBW_ARCHS_WINDOWS: "AMD64"
+
+      
+
+      CIBW_ENVIRONMENT_WINDOWS: >
+
+        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake 
+
+        VCPKG_FEATURE_FLAGS=-manifests 
+
+        Python_EXECUTABLE={python} 
+
+        VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE
+
+      #CIBW_ENVIRONMENT_WINDOWS: "CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake VCPKG_FEATURE_FLAGS=-manifests Python_EXECUTABLE={python}"
+
+      CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE"  
+
+ 
+
+      ###########################################################################
+
+      # macOS
+
+      ###########################################################################
+
+      CIBW_ARCHS_MACOS: "x86_64"
+
+      CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=10.15 Boost_NO_BOOST_CMAKE=ON"
+
+
+      #  Installation automatique des libs C++ dans le wheel (TOUS OS)
+
+      SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
+
+
+
+      # DEBUG scikit-build-core / CMake
+
+      SKBUILD_VERBOSE: "1"
+
+      SKBUILD_BUILD_OPTIONS: "--verbose"
+
+      VERBOSE: "1"
+
+      CMAKE_VERBOSE_MAKEFILE: "ON"
+
+      
+
+    steps:
+
+
+      ###########################################################################
+
+      # Checkout code
+
+      ###########################################################################
+
+      - name: Checkout repository
+
+        uses: actions/checkout@v4
+
+
+      - name: Clone StOpt
+
+        run: git clone https://gitlab.com/stochastic-control/StOpt.git
+
+
+      ###########################################################################
+
+      # Setup Python 3.10 → cibuildwheel driver (Linux + macOS only)
+
+      ###########################################################################
+
+      - name: Setup Python 3.10 driver
+
+        if: runner.os != 'Windows'
+
+        uses: actions/setup-python@v5
+
+        with:
+
+          python-version: "3.10"
+
+
+      ###########################################################################
+
+      # WINDOWS : prepare vcpkg (WITHOUT manifest install)
+
+      ###########################################################################
+
+      - name: Prepare vcpkg for Windows
+
+        if: runner.os == 'Windows'
+
+        shell: pwsh
+
+        run: |
+
+          cd StOpt
+
+          if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
+
+          git clone https://github.com/microsoft/vcpkg vcpkg
+
+          .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+
+          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
+
+          .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
+
+
+      ###########################################################################
+
+      # Install cibuildwheel
+
+      ###########################################################################
+
+      - name: Install cibuildwheel (Linux/macOS)
+
+        if: runner.os != 'Windows'
+
+        run: python -m pip install cibuildwheel==2.17.0
+
+
+      - name: Install cibuildwheel (Windows)
+
+        if: runner.os == 'Windows'
+
+        run: pip install cibuildwheel==2.17.0
+
+
+      ###########################################################################
+
+      # BUILD WHEELS — Linux & macOS
+
+      ###########################################################################
+
+      - name: Build wheels (Linux & macOS)
+
+        if: runner.os != 'Windows'
+
+        shell: bash
+
+        run: |
+
+          cd StOpt
+
+          python -m cibuildwheel --output-dir ../wheelhouse
+
+        env:
+
+
+          #######################################################################
+
+          # LINUX — Boost + Eigen installation
+
+          #######################################################################
+
+          CIBW_BEFORE_ALL_LINUX: >
+
+            yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
+
+            wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
+
+            tar -xzf eigen-3.4.0.tar.gz &&
+
+            cd eigen-3.4.0 &&
+
+            cmake -B build -DCMAKE_INSTALL_PREFIX=/usr &&
+
+            cmake --build build --target install &&
+
+            cd .. &&
+
+            wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
+
+            tar -xzf boost_1_84_0.tar.gz &&
+
+            cd boost_1_84_0 &&
+
+            ./bootstrap.sh &&
+
+            ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
+
+
+          #######################################################################
+
+          # MACOS — Boost via Homebrew
+
+          #######################################################################
+
+          CIBW_BEFORE_ALL_MACOS: >
+
+            brew update &&
+
+            brew install boost eigen cmake zlib bzip2
+
+
+          CIBW_BEFORE_BUILD_MACOS: >
+
+            echo "===== DEBUG: SKBUILD DIR =====" &&
+
+            ls -R _skbuild || true &&
+
+            echo "===== INSTALLING DYLIBS INTO pystopt/ =====" 
+
+
+          CIBW_TEST_COMMAND_MACOS: >
+
+            python - << 'EOF'
+
+            import pystopt
+
+            import sys
+
+            import os
+
+            import pathlib
+
+
+            print("========= DEBUG MACOS BUILD =========")
+
+            print("pystopt loaded from:", pathlib.Path(pystopt.__file__).parent)
+
+
+            p = pathlib.Path(pystopt.__file__).parent
+
+            for f in p.iterdir():
+
+              print(" -", f)
+
+
+            print("========= DONE =========")
+
+            EOF
+
+
+          #######################################################################
+
+          # macOS — delocate
+
+          #######################################################################
+
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+
+            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd) -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -) &&
+
+            echo "--- LISTING DES DYLIBS TROUVEES ---" &&
+
+            find . -name "*.dylib" &&
+
+            echo "--- CONTENU DE LA ROUE BRUTE ---" &&
+
+            unzip -l {wheel} &&
+
+            delocate-wheel -v -w {dest_dir} {wheel}        
+
+
+          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+
+          #   cp build/libStOpt.dylib {project}/pystopt/ &&
+
+          #   cp build/geners/libgeners.dylib {project}/pystopt/ &&
+
+          #   delocate-wheel -v -w {dest_dir} {wheel}
+
+          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+
+          #  cmake --install build --prefix {project}/pystopt &&
+
+          #  delocate-wheel -v -w {dest_dir} {wheel}
+
+
+      ###########################################################################
+
+      # BUILD WHEELS — Windows
+
+      ###########################################################################
+
+      - name: Build wheels (Windows)
+
+        if: runner.os == 'Windows'
+
+        run: |
+
+          cd StOpt
+
+          cibuildwheel --output-dir ../wheelhouse
+
+        env:
+
+          CIBW_BEFORE_BUILD_WINDOWS: >
+
+            echo "==== DEBUG WINDOWS ENV ====" &&
+
+            env &&
+
+            echo "==== PYTHON PATHS ====" &&
+
+            where python &&
+
+            python --version &&
+
+            echo "==== SEARCHING NuGet Python ====" &&
+
+            dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
+
+            echo "NuGet Python not found" 
+
+
+          CIBW_BEFORE_ALL_WINDOWS: ""
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
+
+            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
+
+
+      ###########################################################################
+
+      # Upload
+
+      ###########################################################################
+
+      - name: Upload wheels
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: wheels-${{ matrix.os }}
+
+          path: ./wheelhouse/*.whl name: Build Wheels for StOpt (Boost 1.84 + Eigen 3.4 + pybind11)
 
 on:
   workflow_dispatch:
@@ -173,14 +605,28 @@ jobs:
           #  find . -name "*.dylib" &&
           #  echo "--- CONTENU DE LA ROUE BRUTE ---" &&
           #  unzip -l {wheel} &&
-          #  delocate-wheel -v -w {dest_dir} {wheel}        
+          #  delocate-wheel -v -w {dest_dir} {wheel}
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            # 1. On localise où sont les dylibs dans le build directory de scikit-build
-            # On cherche récursivement car le chemin peut varier selon la version de python
-            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd)/_skbuild -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -):/usr/local/lib &&
-            echo "DYLD_LIBRARY_PATH est réglé sur: $DYLD_LIBRARY_PATH" &&
-            # 2. On répare la wheel
-            delocate-wheel --require-archs {delocate_archs} -v -w {dest_dir} {wheel}
+            echo "--- EXTRACTING WHEEL ---" &&
+            TMPDIR=$(mktemp -d) &&
+            unzip {wheel} -d "$TMPDIR" &&
+
+            echo "--- COPYING DYLIBS FROM BUILD INTO WHEEL/pystopt/ ---" &&
+            find build -name "*.dylib" -exec cp {} "$TMPDIR/pystopt/" \; &&
+
+            echo "--- REPACKING WHEEL ---" &&
+            (cd "$TMPDIR" && zip -qr ../fixed.whl .) &&
+            mv "$TMPDIR/../fixed.whl" {wheel} &&
+
+            echo "--- Running DELOCATE ---" &&
+            delocate-wheel --require-archs x86_64 -v -w {dest_dir} {wheel}
+          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+          #  # 1. On localise où sont les dylibs dans le build directory de scikit-build
+          #  # On cherche récursivement car le chemin peut varier selon la version de python
+          #  export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd)/_skbuild -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -):/usr/local/lib &&
+          #  echo "DYLD_LIBRARY_PATH est réglé sur: $DYLD_LIBRARY_PATH" &&
+          #  # 2. On répare la wheel
+          #  delocate-wheel --require-archs {delocate_archs} -v -w {dest_dir} {wheel}
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
