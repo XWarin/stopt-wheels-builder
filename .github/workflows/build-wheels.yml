@@ -52,6 +52,9 @@ jobs:
       CIBW_ARCHS_MACOS: "x86_64"
       CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=10.15 Boost_NO_BOOST_CMAKE=ON"
 
+      #  Installation automatique des libs C++ dans le wheel (TOUS OS)
+      SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
+
     steps:
 
       ###########################################################################
@@ -132,19 +135,17 @@ jobs:
             brew update &&
             brew install boost eigen cmake zlib bzip2
 
+          CIBW_BEFORE_BUILD_MACOS: >
+            echo "===== DEBUG: SKBUILD DIR =====" &&
+            ls -R _skbuild || true &&
+            echo "===== INSTALLING DYLIBS INTO pystopt/ =====" &&
+
           #######################################################################
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-             echo "===== DEBUG: Listing project directory =====" &&
-             ls -R {project} &&
-             echo "===== DEBUG: Listing build outputs =====" &&
-             ls -R {project}/_skbuild || true &&
-             echo "===== DEBUG: Listing wheels =====" &&
-             ls -R {wheel} || true &&
-             cp {project}/_skbuild/*/cmake-build/libStOpt.dylib {project}/pystopt/ &&
-             cp {project}/_skbuild/*/cmake-build/geners/libgeners.dylib {project}/pystopt/ &&
-             delocate-wheel -v -w {dest_dir} {wheel}
+            delocate-wheel -v -w {dest_dir} {wheel}
+	    
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
           #   cp build/geners/libgeners.dylib {project}/pystopt/ &&
