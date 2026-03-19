@@ -1,3 +1,3 @@
-These scripts are used to create the pip packages for the library pystopt giving bindings to StOpt libray:
+These scripts are used to create the pip packages for the library pystopt giving bindings to StOpt library:
 
 https://gitlab.com/stochastic-control/StOpt
