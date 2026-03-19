@@ -57,6 +57,13 @@ jobs:
       #  Installation automatique des libs C++ dans le wheel (TOUS OS)
       SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
 
+
+      # DEBUG scikit-build-core / CMake
+      SKBUILD_VERBOSE: "1"
+      SKBUILD_BUILD_OPTIONS: "--verbose"
+      VERBOSE: "1"
+      CMAKE_VERBOSE_MAKEFILE: "ON"
+      
     steps:
 
       ###########################################################################
