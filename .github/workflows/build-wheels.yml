@@ -133,9 +133,19 @@ jobs:
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-             cp build/libStOpt.dylib {project}/pystopt/ &&
-             cp build/geners/libgeners.dylib {project}/pystopt/ &&
+             echo "===== DEBUG: Listing project directory =====" &&
+             ls -R {project} &&
+             echo "===== DEBUG: Listing build outputs =====" &&
+             ls -R {project}/_skbuild || true &&
+             echo "===== DEBUG: Listing wheels =====" &&
+             ls -R {wheel} || true &&
+             cp {project}/_skbuild/*/cmake-build/libStOpt.dylib {project}/pystopt/ &&
+             cp {project}/_skbuild/*/cmake-build/geners/libgeners.dylib {project}/pystopt/ &&
              delocate-wheel -v -w {dest_dir} {wheel}
+          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+          #   cp build/libStOpt.dylib {project}/pystopt/ &&
+          #   cp build/geners/libgeners.dylib {project}/pystopt/ &&
+          #   delocate-wheel -v -w {dest_dir} {wheel}
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #  cmake --install build --prefix {project}/pystopt &&
           #  delocate-wheel -v -w {dest_dir} {wheel}
