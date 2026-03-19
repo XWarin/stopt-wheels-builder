@@ -65,11 +65,11 @@ jobs:
       
     steps:
 
-    - name: Make macOS scripts executable
-      run: |
+      - name: Make macOS scripts executable
+        run: |
          chmod +x StOpt/utils/*.sh
          
-    ###########################################################################
+      ###########################################################################
       # Checkout code
       ###########################################################################
       - name: Checkout repository
