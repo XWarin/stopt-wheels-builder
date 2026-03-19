@@ -165,10 +165,12 @@ jobs:
           # macOS — delocate
           #######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            #         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(pwd)/StOpt/pystopt:$(pwd)/pystopt &&
-            echo "--- Contenu de la roue brute ---" &&
-            unzip -l {wheel} &&   
-            delocate-wheel -v -w {dest_dir} {wheel}  
+            export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$(find $(pwd) -name "*.dylib" -exec dirname {} + | sort -u | paste -sd ":" -) &&
+            echo "--- LISTING DES DYLIBS TROUVEES ---" &&
+            find . -name "*.dylib" &&
+            echo "--- CONTENU DE LA ROUE BRUTE ---" &&
+            unzip -l {wheel} &&
+            delocate-wheel -v -w {dest_dir} {wheel}        
 
           #CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
           #   cp build/libStOpt.dylib {project}/pystopt/ &&
