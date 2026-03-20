@@ -36,14 +36,12 @@ jobs:
         id: cache-vcpkg
         uses: actions/cache@v4
         with:
+          # On cache le dossier vcpkg ET les binaires installés
           path: |
-            ${{ env.VCPKG_ROOT }}
-            !${{ env.VCPKG_ROOT }}\buildtrees
-            !${{ env.VCPKG_ROOT }}\packages
-            !${{ env.VCPKG_ROOT }}\downloads
-          key: vcpkg-${{ runner.os }}-${{ hashFiles('StOpt/vcpkg.json') }}-v2
-          restore-keys: |
-            vcpkg-${{ runner.os }}-
+            StOpt/vcpkg
+            StOpt/vcpkg/installed
+          # La clé est basée sur la liste des packages que tu installes
+          key: ${{ runner.os }}-vcpkg-stopt-v1   
 
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
