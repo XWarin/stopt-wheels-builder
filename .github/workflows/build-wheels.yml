@@ -188,17 +188,7 @@ jobs:
             python -c "import pystopt; print('Import OK'); print('Test OK')"
 
            
-          CIBW_BEFORE_BUILD_WINDOWS: >
-            echo "==== DEBUG WINDOWS ENV ====" &&
-            env &&
-            echo "==== PYTHON PATHS ====" &&
-            where python &&
-            python --version && 
-            echo "==== SEARCHING NuGet Python ====" &&
-            dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
-            echo "NuGet Python not found" 
-          
-                          
+                      
       ###########################################################################
       # Upload
       ###########################################################################
