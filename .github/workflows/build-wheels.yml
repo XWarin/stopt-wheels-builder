@@ -161,29 +161,32 @@ jobs:
       ###########################################################################
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
+
         env:
-          CIBW_ARCHS_WINDOWS: "AMD64"
-    
+          # Obligatoire pour rester dans StOpt/
+          CIBW_BUILD_FRONTEND: "pip"
+          CIBW_MAKEPYTHONDIR: "1"
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            echo "Entering StOpt"
+            cd StOpt
+
+          # La toolchain EXACTE qui fonctionnait
           CIBW_ENVIRONMENT_WINDOWS: |
-               VCPKG_ROOT=${{ github.workspace }}/StOpt/vcpkg
-               CMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-               VCPKG_FEATURE_FLAGS=-manifests
-               Python_EXECUTABLE={python}
-               VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
-  
-          SKBUILD_CMAKE_ARGS: >
-           -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-            -DVCPKG_FEATURE_FLAGS=-manifests
-            -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
-            -DPython_EXECUTABLE={python}
-            -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
-            -DBUILD_MPI=OFF
-            -DBUILD_TEST=OFF
-            -DBUILD_SDDP=OFF
-            -DBUILD_DPCUTS=OFF
+            CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+            Python_EXECUTABLE={python}
+            VCPKG_FEATURE_FLAGS=-manifests
+            VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
+            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
+
+          CIBW_TEST_COMMAND: >
+            python -c "import pystopt; print('Import OK'); print('Test OK')"
+
            
           CIBW_BEFORE_BUILD_WINDOWS: >
             echo "==== DEBUG WINDOWS ENV ====" &&
@@ -194,13 +197,8 @@ jobs:
             echo "==== SEARCHING NuGet Python ====" &&
             dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
             echo "NuGet Python not found" 
-          CIBW_BEFORE_ALL_WINDOWS: ""
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: >
-                             python -c "import pystopt; print('Import OK'); 
-                             print('Test fonctionnel OK')"
-                             
+          
+                          
       ###########################################################################
       # Upload
       ###########################################################################
