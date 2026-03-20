@@ -120,6 +120,15 @@ jobs:
         if: runner.os == 'Windows'
         run: pip install cibuildwheel==2.17.0
 
+      - name: Inspect Python structure (Debug)
+        if: runner.os == 'Windows'
+        run: |
+          echo "PYTHON EXECUTABLE: ${{ env.CIBW_PYTHON_EXECUTABLE }}"
+          echo "PYTHON ROOT: ${{ env.CIBW_PYTHON_ROOT }}"
+          dir "${{ env.CIBW_PYTHON_ROOT }}"
+          dir "${{ env.CIBW_PYTHON_ROOT }}\include"
+          dir "${{ env.CIBW_PYTHON_ROOT }}\libs"
+        shell: pwsh
       ###########################################################################
       # BUILD WHEELS — Linux & macOS
       ###########################################################################
