@@ -35,14 +35,31 @@ jobs:
       ###########################################################################
       CIBW_ARCHS_WINDOWS: "AMD64"
       
-      CIBW_ENVIRONMENT_WINDOWS: >
-        CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake 
-        VCPKG_FEATURE_FLAGS=-manifests 
-        Python_EXECUTABLE={python} 
-        VCPKG_ENV_PASSTHROUGH_UNTOUCHED="Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR"
-        
-      CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF"  
+      #CIBW_ENVIRONMENT_WINDOWS: >
+      #  CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake 
+      #  VCPKG_FEATURE_FLAGS=-manifests 
+      #  Python_EXECUTABLE={python} 
+      #  VCPKG_ENV_PASSTHROUGH_UNTOUCHED="Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR"
+      
+      CIBW_ENVIRONMENT_WINDOWS: |
+        VCPKG_ROOT=$PWD/StOpt/vcpkg
+        CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+        VCPKG_FEATURE_FLAGS=-manifests
+        Python_EXECUTABLE={python}
+        VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
+  
+      #CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF"  
  
+      SKBUILD_CMAKE_ARGS: >
+           -DBUILD_MPI=OFF
+           -DBUILD_TEST=OFF
+           -DBUILD_SDDP=OFF
+           -DBUILD_DPCUTS=OFF
+           -DBUILD_BRANCHING=OFF
+           -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
+           -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
+           -DPython_EXECUTABLE={python}
+           
       ###########################################################################
       # macOS
       ###########################################################################
@@ -98,6 +115,7 @@ jobs:
           cd StOpt
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
+          echo "VCPKG_ROOT set to $PWD/vcpkg"
           .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
           if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
@@ -185,6 +203,7 @@ jobs:
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
+           
           CIBW_BEFORE_BUILD_WINDOWS: >
             echo "==== DEBUG WINDOWS ENV ====" &&
             env &&
