@@ -48,17 +48,17 @@ jobs:
   
       #CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF"  
  
-      SKBUILD_CMAKE_ARGS: >
-       -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-       -DVCPKG_FEATURE_FLAGS=-manifests
-       -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
-       -DPython_EXECUTABLE={python}
-       -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
-       -DBUILD_MPI=OFF
-       -DBUILD_TEST=OFF
-       -DBUILD_SDDP=OFF
-       -DBUILD_DPCUTS=OFF
-       -DBUILD_BRANCHING=OFF
+      #SKBUILD_CMAKE_ARGS: >
+      # -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
+      # -DVCPKG_FEATURE_FLAGS=-manifests
+      # -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
+      # -DPython_EXECUTABLE={python}
+      # -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
+      # -DBUILD_MPI=OFF
+      # -DBUILD_TEST=OFF
+      # -DBUILD_SDDP=OFF
+      # -DBUILD_DPCUTS=OFF
+      # -DBUILD_BRANCHING=OFF
            
       ###########################################################################
       # macOS
