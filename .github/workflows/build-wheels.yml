@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         #os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ macos-latest]
+        os: [ windows-latest]
 
     env:
       # cibuildwheel Pythons
@@ -27,39 +27,7 @@ jobs:
       # Linux — scikit-build-core MUST use proper Python
       ###########################################################################
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
-
-      ###########################################################################
-      # Windows — FIXED (block mapping, not single-line string)
-      ###########################################################################
-      CIBW_ARCHS_WINDOWS: "AMD64"
-      
-      #CIBW_ENVIRONMENT_WINDOWS: >
-      #  CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake 
-      #  VCPKG_FEATURE_FLAGS=-manifests 
-      #  Python_EXECUTABLE={python} 
-      #  VCPKG_ENV_PASSTHROUGH_UNTOUCHED="Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR"
-      
-      CIBW_ENVIRONMENT_WINDOWS: |
-        VCPKG_ROOT=${{ github.workspace }}/StOpt/vcpkg
-        CMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-        VCPKG_FEATURE_FLAGS=-manifests
-        Python_EXECUTABLE={python}
-        VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
-  
-      #CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF"  
- 
-      #SKBUILD_CMAKE_ARGS: >
-      # -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-      # -DVCPKG_FEATURE_FLAGS=-manifests
-      # -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
-      # -DPython_EXECUTABLE={python}
-      # -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
-      # -DBUILD_MPI=OFF
-      # -DBUILD_TEST=OFF
-      # -DBUILD_SDDP=OFF
-      # -DBUILD_DPCUTS=OFF
-      # -DBUILD_BRANCHING=OFF
-           
+        
       ###########################################################################
       # macOS
       ###########################################################################
@@ -71,7 +39,6 @@ jobs:
         Boost_NO_BOOST_CMAKE=ON 
       #  Installation automatique des libs C++ dans le wheel (TOUS OS)
       SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
-
 
       # DEBUG scikit-build-core / CMake
       SKBUILD_VERBOSE: "1"
@@ -198,6 +165,25 @@ jobs:
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
+          CIBW_ARCHS_WINDOWS: "AMD64"
+    
+          CIBW_ENVIRONMENT_WINDOWS: |
+               VCPKG_ROOT=${{ github.workspace }}/StOpt/vcpkg
+               CMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
+               VCPKG_FEATURE_FLAGS=-manifests
+               Python_EXECUTABLE={python}
+               VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
+  
+          SKBUILD_CMAKE_ARGS: >
+           -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
+            -DVCPKG_FEATURE_FLAGS=-manifests
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
+            -DPython_EXECUTABLE={python}
+            -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
+            -DBUILD_MPI=OFF
+            -DBUILD_TEST=OFF
+            -DBUILD_SDDP=OFF
+            -DBUILD_DPCUTS=OFF
            
           CIBW_BEFORE_BUILD_WINDOWS: >
             echo "==== DEBUG WINDOWS ENV ====" &&
