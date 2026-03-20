@@ -195,11 +195,11 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy"
           
           # ENVIRONNEMENT DYNAMIQUE (Supporte 3.10, 3.11, 3.12 automatiquement)
-          CIBW_ENVIRONMENT_WINDOWS: >
+          CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_FIND_STRATEGY=LOCATION;Python_FIND_REGISTRY=NEVER;Python_FIND_VIRTUALENV=ONLY;Python_DEVELOPMENT_MODULE=ON;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF;BUILD_SDDP=OFF"            
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR
+            SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_FIND_STRATEGY=LOCATION;Python_FIND_REGISTRY=NEVER;Python_FIND_VIRTUALENV=ONLY;Python_DEVELOPMENT_MODULE=ON;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF;BUILD_SDDP=OFF"
 
           # Réparation du wheel pour inclure les DLL de vcpkg
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
