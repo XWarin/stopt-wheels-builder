@@ -79,7 +79,7 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: >
             CMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_FIND_STRATEGY=LOCATION;Python_DEVELOPMENT_MODULE=ON;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF"
+            SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_FIND_STRATEGY=LOCATION;Python_FIND_REGISTRY=NEVER;Python_FIND_VIRTUALENV=ONLY;Python_DEVELOPMENT_MODULE=ON;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF"            
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR
 
           # Réparation du wheel pour inclure les DLL de vcpkg
