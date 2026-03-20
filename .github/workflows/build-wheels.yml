@@ -1,5 +1,3 @@
-name: Build wheels
-
 on:
   workflow_dispatch:
   push:
@@ -10,65 +8,80 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
+    ###########################################################################
+    # Correct order: strategy → env → steps
+    ###########################################################################
     strategy:
       fail-fast: false
       matrix:
         #os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [ macos-latest]
 
     env:
       # cibuildwheel Pythons
+      #CIBW_BUILD: "cp310-* cp311-* cp312-*"
       CIBW_BUILD: "cp310-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
       ###########################################################################
-      # LINUX — scikit-build-core MUST use proper Python
+      # Linux — scikit-build-core MUST use proper Python
       ###########################################################################
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
 
       ###########################################################################
-      # WINDOWS — Chemins ABSOLUS
+      # Windows — FIXED (block mapping, not single-line string)
       ###########################################################################
       CIBW_ARCHS_WINDOWS: "AMD64"
-
+      
+      #CIBW_ENVIRONMENT_WINDOWS: >
+      #  CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake 
+      #  VCPKG_FEATURE_FLAGS=-manifests 
+      #  Python_EXECUTABLE={python} 
+      #  VCPKG_ENV_PASSTHROUGH_UNTOUCHED="Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR"
+      
       CIBW_ENVIRONMENT_WINDOWS: |
         VCPKG_ROOT=${{ github.workspace }}/StOpt/vcpkg
-        CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-        Python_EXECUTABLE={python}
+        CMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
         VCPKG_FEATURE_FLAGS=-manifests
+        Python_EXECUTABLE={python}
         VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR
-
+  
+      #CIBW_CMAKE_ARGS_WINDOWS: "-DBUILD_MPI=OFF -DBUILD_TEST=OFF -DBUILD_SDDP=OFF -DBUILD_DPCUTS=OFF -DBUILD_BRANCHING=OFF -DVCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF"  
+ 
       SKBUILD_CMAKE_ARGS: >
-        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
-        -DVCPKG_FEATURE_FLAGS=-manifests
-        -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
-        -DPython_EXECUTABLE={python}
-        -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
-        -DBUILD_MPI=OFF
-        -DBUILD_TEST=OFF
-        -DBUILD_SDDP=OFF
-        -DBUILD_DPCUTS=OFF
-        -DBUILD_BRANCHING=OFF
-
+       -DCMAKE_TOOLCHAIN_FILE=../../../../StOpt/vcpkg/scripts/buildsystems/vcpkg.cmake
+       -DVCPKG_FEATURE_FLAGS=-manifests
+       -DCMAKE_DISABLE_FIND_PACKAGE_Python=OFF
+       -DPython_EXECUTABLE={python}
+       -DZ_VCPKG_PYTHON_WRAPPER_ENABLED=OFF
+       -DBUILD_MPI=OFF
+       -DBUILD_TEST=OFF
+       -DBUILD_SDDP=OFF
+       -DBUILD_DPCUTS=OFF
+       -DBUILD_BRANCHING=OFF
+           
       ###########################################################################
       # macOS
       ###########################################################################
       CIBW_ARCHS_MACOS: "x86_64"
-      CIBW_ENVIRONMENT_MACOS: |
-        CC=/usr/bin/clang
-        CXX=/usr/bin/clang++
-        MACOSX_DEPLOYMENT_TARGET=10.15
-        Boost_NO_BOOST_CMAKE=ON
-
+      CIBW_ENVIRONMENT_MACOS: >
+        CC=/usr/bin/clang 
+        CXX=/usr/bin/clang++ 
+        MACOSX_DEPLOYMENT_TARGET=10.15 
+        Boost_NO_BOOST_CMAKE=ON 
+      #  Installation automatique des libs C++ dans le wheel (TOUS OS)
       SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
 
+
+      # DEBUG scikit-build-core / CMake
       SKBUILD_VERBOSE: "1"
       SKBUILD_BUILD_OPTIONS: "--verbose"
       VERBOSE: "1"
       CMAKE_VERBOSE_MAKEFILE: "ON"
-
+      
     steps:
 
+         
       ###########################################################################
       # Checkout code
       ###########################################################################
@@ -79,8 +92,9 @@ jobs:
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
       - name: Make macOS scripts executable
-        run: chmod +x StOpt/utils/*.sh
-
+        run: |
+         chmod +x StOpt/utils/*.sh
+         
       ###########################################################################
       # Setup Python 3.10 → cibuildwheel driver (Linux + macOS only)
       ###########################################################################
@@ -91,7 +105,7 @@ jobs:
           python-version: "3.10"
 
       ###########################################################################
-      # WINDOWS : prepare vcpkg (WITHOUT manifest mode)
+      # WINDOWS : prepare vcpkg (WITHOUT manifest install)
       ###########################################################################
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
@@ -100,10 +114,10 @@ jobs:
           cd StOpt
           if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
           git clone https://github.com/microsoft/vcpkg vcpkg
-          .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
           echo "VCPKG_ROOT set to $PWD/vcpkg"
+          .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
-
       ###########################################################################
       # Install cibuildwheel
       ###########################################################################
@@ -116,7 +130,7 @@ jobs:
         run: pip install cibuildwheel==2.17.0
 
       ###########################################################################
-      # BUILD — Linux & macOS
+      # BUILD WHEELS — Linux & macOS
       ###########################################################################
       - name: Build wheels (Linux & macOS)
         if: runner.os != 'Windows'
@@ -125,6 +139,10 @@ jobs:
           cd StOpt
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
+
+          #######################################################################
+          # LINUX — Boost + Eigen installation
+          #######################################################################
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget python3-devel cmake make gcc-c++ zlib-devel bzip2-devel &&
             wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz &&
@@ -138,17 +156,25 @@ jobs:
             cd boost_1_84_0 &&
             ./bootstrap.sh &&
             ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
-
+          #######################################################################
+          # MACOS — Boost via Homebrew
+          #######################################################################
           CIBW_CMAKE_ARGS_MACOS: >
-            -DCMAKE_INSTALL_RPATH="@loader_path/."
-            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
-            -DCMAKE_MACOSX_RPATH=ON
-            -DBUILD_SHARED_LIBS=ON
-            -DBoost_USE_STATIC_LIBS=ON
-            -DBoost_USE_SHARED_LIBS=OFF
-
+                                 -DCMAKE_INSTALL_RPATH="@loader_path/."
+                                 -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+                                 -DCMAKE_MACOSX_RPATH=ON
+                                 -DBUILD_SHARED_LIBS=ON
+                                 -DBoost_USE_STATIC_LIBS=ON 
+                                 -DBoost_USE_SHARED_LIBS=OFF
+                                 
           CIBW_BEFORE_ALL_MACOS: "brew install boost eigen cmake zlib bzip2"
 
+ 
+          ###########################################################################
+          # macOS — delocate (REPAIR)   
+          ###########################################################################
+          #CIBW_REPAIR_WHEEL_COMMAND_MACOS: > 
+          #     bash utils/repair_macos_wheel.sh {wheel} {dest_dir} 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             export WHEEL_PATH={wheel} &&
             TMPDIR=$(mktemp -d) &&
@@ -159,41 +185,42 @@ jobs:
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH" &&
             ls -lh {dest_dir}/*.whl
-
+            
           CIBW_TEST_COMMAND: >
-            python -c "import pystopt; print('Import OK'); print('Test fonctionnel OK')"
-
+                             python -c "import pystopt; print('Import OK'); 
+                             print('Test fonctionnel OK')"
       ###########################################################################
-      # BUILD — Windows
+      # BUILD WHEELS — Windows
       ###########################################################################
       - name: Build wheels (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
         run: |
           cd StOpt
           cibuildwheel --output-dir ../wheelhouse
         env:
+           
           CIBW_BEFORE_BUILD_WINDOWS: >
             echo "==== DEBUG WINDOWS ENV ====" &&
             env &&
             echo "==== PYTHON PATHS ====" &&
             where python &&
-            python --version &&
+            python --version && 
             echo "==== SEARCHING NuGet Python ====" &&
             dir C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache\nuget-cpython\ /b /s ||
-            echo "NuGet Python not found"
-
+            echo "NuGet Python not found" 
+          CIBW_BEFORE_ALL_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
-
           CIBW_TEST_COMMAND: >
-            python -c "import pystopt; print('Import OK'); print('Test fonctionnel OK')"
-
+                             python -c "import pystopt; print('Import OK'); 
+                             print('Test fonctionnel OK')"
+                             
       ###########################################################################
-      # UPLOAD
+      # Upload
       ###########################################################################
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
+
