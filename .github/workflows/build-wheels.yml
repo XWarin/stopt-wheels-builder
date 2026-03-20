@@ -74,17 +74,36 @@ jobs:
       ###########################################################################
       # WINDOWS : prepare vcpkg (WITHOUT manifest install)
       ###########################################################################
+      - name: Cache vcpkg (Windows)
+        if: runner.os == 'Windows'
+        id: cache-vcpkg
+        uses: actions/cache@v4
+        with:
+          # On cache le dossier vcpkg ET les binaires installés
+          path: |
+            StOpt/vcpkg
+            StOpt/vcpkg/installed
+          # La clé est basée sur la liste des packages que tu installes
+          key: ${{ runner.os }}-vcpkg-stopt-v1
+
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           cd StOpt
-          if (Test-Path vcpkg) { Remove-Item -Recurse -Force vcpkg }
-          git clone https://github.com/microsoft/vcpkg vcpkg
-          echo "VCPKG_ROOT set to $PWD/vcpkg"
-          .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          # Ne clone que si le cache n'a pas été trouvé
+          if (-not (Test-Path vcpkg)) {
+            git clone https://github.com/microsoft/vcpkg vcpkg
+            .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          }
+          
           if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
+          
+          # vcpkg détecte automatiquement si les paquets sont déjà là
           .\vcpkg\vcpkg.exe install pybind11 boost-multi-array boost-timer boost-test boost-random boost-chrono boost-system boost-log boost-serialization eigen3 coin-or-osi coin-or-clp --triplet x64-windows
+
+
+
       ###########################################################################
       # Install cibuildwheel
       ###########################################################################
@@ -183,14 +202,10 @@ jobs:
           # La toolchain EXACTE qui fonctionnait
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
-            Python_EXECUTABLE={python}
-            Python_ROOT_DIR={python_root}
-            Python_INCLUDE_DIR={python_root}\include
-            Python_LIBRARY={python_root}\libs\python310.lib
             VCPKG_FEATURE_FLAGS=-manifests
-            VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR;Python_LIBRARY 
-            SKBUILD_CMAKE_DEFINE=Python_EXECUTABLE={python};CMAKE_DISABLE_FIND_PACKAGE_Python=OFF;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF
-          
+            VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_INCLUDE_DIR;Python_LIBRARY
+            # On définit TOUT dans SKBUILD_CMAKE_DEFINE pour écraser le cache de CMake
+            SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_INCLUDE_DIR={python_root}\include;Python_LIBRARY={python_root}\libs\python310.lib;Python_FIND_STRATEGY=LOCATION;Python_FIND_REGISTRY=NEVER;Python_DEVELOPMENT_MODULE=ON;CMAKE_DISABLE_FIND_PACKAGE_Python=OFF;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF"          
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
