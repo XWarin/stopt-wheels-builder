@@ -125,24 +125,19 @@ jobs:
           ######################################################################
           # ENVIRONNEMENT WINDOWS (avec prints)
           ######################################################################
-          CIBW_ENVIRONMENT_WINDOWS: |
+	  CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            Python_EXECUTABLE="{python}"
             Python_ROOT_DIR="{python_root}"
-            Python_INCLUDE_DIR="{python_root}/include"
-            # FIX IMPORTANT : support 3.11, 3.12, 3.13
-            Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib;{python_root}/libs/python3.lib"
             Python_FIND_STRATEGY=LOCATION
-            Python_FIND_REGISTRY=NEVER
-            Python_FIND_VIRTUALENV=ONLY
+            Python_EXECUTABLE="{python}"
             SKBUILD_BUILD_DIR="build_{python_version}"
-            SKBUILD_VERBOSE=1
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF 
             WITHCIBUILD=ON
+            CMAKE_ARGS="-DSelectPython_DEBUG=ON -DPython_DEBUG=ON"    
     
           ######################################################################
           # Réparation du wheel Windows
