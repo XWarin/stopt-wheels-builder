@@ -107,7 +107,7 @@ jobs:
         env:
           CIBW_BUILD_FRONTEND: "pip"
           # Utilisation de syntaxe compatible CMD (Windows)
-	  
+
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install numpy delvewheel && 
             echo "--- LIBS DIR ---" && 
