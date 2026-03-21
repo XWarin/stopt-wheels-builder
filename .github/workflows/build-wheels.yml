@@ -123,45 +123,9 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
 
           ######################################################################
-          # DEBUG AVANT BUILD : imprime toutes les infos Python côté Windows
-          ######################################################################
-          CIBW_BEFORE_BUILD_WINDOWS: |
-            echo "========== DEBUG: cibuildwheel BEFORE BUILD =========="
-            echo Python executable: %PYTHON%
-            echo Python root:       %PYTHON_ROOT%
-            echo Version:           %PYTHON_VERSION%
-            echo Version no dot:    %PYTHON_VERSION_NODOT%
-            echo.
-
-            echo ---- Contenu du dossier libs ----
-            if exist %PYTHON_ROOT%\libs (
-               dir %PYTHON_ROOT%\libs
-            ) else (
-               echo !!! ATTENTION: dossier %PYTHON_ROOT%\libs inexistant !!!
-            )
-
-            echo ========================================================     
-            pip install numpy delvewheel
-
-          ######################################################################
           # ENVIRONNEMENT WINDOWS (avec prints)
           ######################################################################
           CIBW_ENVIRONMENT_WINDOWS: |
-            echo "========== DEBUG: CIBW_ENVIRONMENT_WINDOWS =========="
-            echo "Python root  : {python_root}"
-            echo "Python exe   : {python}"
-            echo "Include dir  : {python_root}/include"
-            echo "Recherche libs: python{python_version_nodot}.lib ; python3.lib"
-            echo "------------------------------------------------------"
-            if exist "{python_root}\libs" (
-                echo "Contenu réel du dossier libs :"
-                dir "{python_root}\libs"
-            ) else (
-                echo "!!! {python_root}\libs n'existe PAS !!!"
-            )
-            echo "======================================================"
-
-            # Variables réellement utilisées par CMake
             Python_EXECUTABLE="{python}"
             Python_ROOT_DIR="{python_root}"
             Python_INCLUDE_DIR="{python_root}/include"
@@ -181,7 +145,8 @@ jobs:
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
-
+            WITHCIBUILD=ON
+	    
           ######################################################################
           # Réparation du wheel Windows
           ######################################################################
