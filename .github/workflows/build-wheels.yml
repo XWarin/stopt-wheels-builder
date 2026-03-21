@@ -108,44 +108,38 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
           # Utilisation de syntaxe compatible CMD (Windows)
 
+          # On utilise des slashs / et on enlève les guillemets superflus
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install numpy delvewheel && 
-            echo "--- LIBS DIR ---" && 
-            dir "{python_root}\libs" && 
-            echo "--- VERSION NODOT ---" &&  
-            echo {python_version_nodot}
-     
+            echo CHECKING_LIBS && 
+            dir {python_root}/libs/python*.lib
+
           CIBW_ENVIRONMENT_WINDOWS: |
-            # --- CONFIGURATION CMAKE / VCPKG ---
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_INCLUDE_DIR;Python_FIND_STRATEGY;Python_FIND_REGISTRY;Python_FIND_VIRTUALENV
             
-            # --- FIX DETECTION PYTHON DYNAMIQUE ---
-            Python_EXECUTABLE="{python}"
-            Python_ROOT_DIR="{python_root}"
-            Python_INCLUDE_DIR="{python_root}/include"
+            # Utilisation de / pour éviter les problèmes d'échappement Windows
+            Python_ROOT_DIR={python_root}
+            Python_EXECUTABLE={python}
+            Python_INCLUDE_DIR={python_root}/include
+            Python_LIBRARY={python_root}/libs/python{python_version_nodot}.lib
+            Python_LIBRARIES={python_root}/libs/python{python_version_nodot}.lib
             
-            # MAGIE ICI : On reconstruit le nom de la lib (ex: python311.lib, python310.lib)
-            # {python_version_nodot} donne "311" pour Python 3.11
-            Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib"
-            Python_LIBRARIES="{python_root}/libs/python{python_version_nodot}.lib"
+            # On force le pass-through pour que vcpkg ne nettoie rien
+            VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_LIBRARIES;Python_INCLUDE_DIR;Python_FIND_STRATEGY;SKBUILD_BUILD_DIR;SKBUILD_VERBOSE
             
-            # --- STRATÉGIE DE RECHERCHE ---
             Python_FIND_STRATEGY=LOCATION
             Python_FIND_REGISTRY=NEVER
-            Python_FIND_VIRTUALENV=ONLY
-
-            # --- ISOLATION & LOGS ---
-            SKBUILD_BUILD_DIR="build_{python_version}"
+            
+            # Isolation par version
+            SKBUILD_BUILD_DIR=build_{python_version_nodot}
             SKBUILD_VERBOSE=1
             
-            # --- OPTIONS STOPT ---
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
-            BUILD_SDDP=OFF    
-
+            BUILD_SDDP=OFF
+	    
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}  
 
