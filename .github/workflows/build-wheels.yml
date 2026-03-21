@@ -16,7 +16,7 @@ jobs:
 
     env:
       #CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
-      CIBW_BUILD: "cp311-*"
+      CIBW_BUILD: "cp312-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
       CIBW_ARCHS_MACOS: "x86_64"
@@ -106,14 +106,12 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          # Utilisation de syntaxe compatible CMD (Windows)
-
-          # On utilise des slashs / et on enlève les guillemets superflus
+          
+          # On utilise Python pour lister les fichiers : c'est universel et insensible aux slashs/antislashs
           CIBW_BEFORE_BUILD_WINDOWS: >
-            pip install numpy delvewheel && 
-            echo CHECKING_LIBS && 
-            dir {python_root}\libs\python*.lib
-
+            pip install numpy delvewheel &&
+            python -c "import os; print('--- LISTING LIBS ---'); print('\n'.join(os.listdir(r'{python_root}/libs')))"
+            
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
