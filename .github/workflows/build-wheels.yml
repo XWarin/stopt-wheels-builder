@@ -16,7 +16,7 @@ jobs:
 
     env:
       #CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
-      CIBW_BUILD: "cp312-*"
+      CIBW_BUILD: "cp311-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
       CIBW_ARCHS_MACOS: "x86_64"
@@ -106,8 +106,13 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel"
-
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            pip install numpy delvewheel
+            echo "--- CONTENU DU DOSSIER LIBS ---"
+            dir "{python_root}\libs"
+            echo "--- VERIFICATION VARIABLE VERSION ---"
+            echo "Version nodot detectee : {python_version_nodot}"
+	    
           CIBW_ENVIRONMENT_WINDOWS: |
             # --- CONFIGURATION CMAKE / VCPKG ---
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -122,6 +127,7 @@ jobs:
             # MAGIE ICI : On reconstruit le nom de la lib (ex: python311.lib, python310.lib)
             # {python_version_nodot} donne "311" pour Python 3.11
             Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib"
+            Python_LIBRARIES="{python_root}/libs/python{python_version_nodot}.lib"
             
             # --- STRATÉGIE DE RECHERCHE ---
             Python_FIND_STRATEGY=LOCATION
