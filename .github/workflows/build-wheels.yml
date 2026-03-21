@@ -106,13 +106,14 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
+          # Utilisation de syntaxe compatible CMD (Windows)
           CIBW_BEFORE_BUILD_WINDOWS: |
             pip install numpy delvewheel
-            echo "--- CONTENU DU DOSSIER LIBS ---"
+            @echo --- CONTENU DU DOSSIER LIBS ---
             dir "{python_root}\libs"
-            echo "--- VERIFICATION VARIABLE VERSION ---"
-            echo "Version nodot detectee : {python_version_nodot}"
-	    
+            @echo --- VERIFICATION VARIABLE VERSION ---
+            @echo Version nodot detectee : {python_version_nodot}
+ 	    
           CIBW_ENVIRONMENT_WINDOWS: |
             # --- CONFIGURATION CMAKE / VCPKG ---
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
