@@ -23,7 +23,7 @@ jobs:
          ]
 
     env:
-      CIBW_BUILD: "cp312-*"
+      CIBW_BUILD: "cp311-*"
       #CIBW_BUILD: "cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
