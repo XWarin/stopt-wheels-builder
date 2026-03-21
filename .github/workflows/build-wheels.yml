@@ -23,7 +23,7 @@ jobs:
          ]
 
     env:
-      CIBW_BUILD: "cp311-*"
+      CIBW_BUILD: "cp312-*"
       #CIBW_BUILD: "cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
@@ -127,18 +127,20 @@ jobs:
           ######################################################################
           CIBW_BEFORE_BUILD_WINDOWS: |
             echo "========== DEBUG: cibuildwheel BEFORE BUILD =========="
-            echo "Python executable = {python}"
-            echo "Python root       = {python_root}"
-            echo "Version           = {python_version}"
-            echo "Version no dot    = {python_version_nodot}"
-            echo ""
-            echo "---- Contenu du dossier libs ----"
-            if exist "{python_root}\libs" (
-                dir "{python_root}\libs"
+            echo Python executable: %PYTHON%
+            echo Python root:       %PYTHON_ROOT%
+            echo Version:           %PYTHON_VERSION%
+            echo Version no dot:    %PYTHON_VERSION_NODOT%
+            echo.
+
+            echo ---- Contenu du dossier libs ----
+            if exist %PYTHON_ROOT%\libs (
+               dir %PYTHON_ROOT%\libs
             ) else (
-                echo "!!! ATTENTION: dossier {python_root}\libs inexistant !!!"
+               echo !!! ATTENTION: dossier %PYTHON_ROOT%\libs inexistant !!!
             )
-            echo "========================================================"
+
+            echo ========================================================     
             pip install numpy delvewheel
 
           ######################################################################
