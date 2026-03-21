@@ -16,7 +16,7 @@ jobs:
 
     env:
       #CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
-      CIBW_BUILD: "cp312-*"
+      CIBW_BUILD: "cp311-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
       CIBW_ARCHS_MACOS: "x86_64"
@@ -113,7 +113,10 @@ jobs:
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_INCLUDE_DIR;Python_FIND_STRATEGY;Python_FIND_REGISTRY;Python_FIND_VIRTUALENV
-            
+             # FORCE LE NETTOYAGE ENTRE CP310, CP311, etc.
+            SKBUILD_BUILD_DIR=build_{python_version}
+            CMAKE_GENERATOR=Visual Studio 17 2022
+           
             # Utilisation des HINTS (Indices) pour CMake
             Python_ROOT_DIR="{python_root}"
             Python_EXECUTABLE="{python}"
