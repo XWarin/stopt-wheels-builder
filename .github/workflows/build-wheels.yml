@@ -189,54 +189,38 @@ jobs:
         shell: pwsh
         run: |
           cd StOpt
-          try {
-              cibuildwheel --output-dir ../wheelhouse
-          } finally {
-              # Collecte des logs en cas d'échec
-              New-Item -ItemType Directory -Force -Path ./debug_logs
-              Get-ChildItem -Path . -Filter "CMake*.log" -Recurse | Copy-Item -Destination ./debug_logs/ -ErrorAction SilentlyContinue
-              Get-ChildItem -Path . -Filter "CMakeConfigureLog.yaml" -Recurse | Copy-Item -Destination ./debug_logs/ -ErrorAction SilentlyContinue
-          }
+          # On lance cibuildwheel
+          python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
           
-          # 1. On inspecte l'intérieur du Python de cibuildwheel
+          # IMPORTANT: On installe les outils de build ICI
           CIBW_BEFORE_BUILD_WINDOWS: |
-            pip install numpy
-            echo "--- CONTENU DE {python_root}\libs ---"
+            pip install numpy delvewheel
             dir "{python_root}\libs"
-            echo "--- CONTENU DE {python_root}\include ---"
-            dir "{python_root}\include"
 
-          # 2. On force CMake à regarder aux bons endroits
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_INCLUDE_DIR
-            
-            # Variables de détection Python
             Python_EXECUTABLE={python}
             Python_ROOT_DIR={python_root}
             Python_INCLUDE_DIR={python_root}\include
-            # On pointe sur python3.lib (le stub générique de NuGet)
             Python_LIBRARY={python_root}\libs\python3.lib
-            
-            # Strategie de recherche stricte
             Python_FIND_STRATEGY=LOCATION
             Python_FIND_REGISTRY=NEVER
             Python_FIND_VIRTUALENV=ONLY
-            
-            # Variables StOpt
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
-            SKBUILD_LOGGING_LEVEL=DEBUG
 
+          # Appel de delvewheel (il sera trouvé car installé via CIBW_BEFORE_BUILD)
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
 
           CIBW_TEST_COMMAND: "python -c \"import pystopt; print('Import OK')\""
+
         
                       
       ###########################################################################
