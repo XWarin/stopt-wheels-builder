@@ -125,7 +125,7 @@ jobs:
           ######################################################################
           # ENVIRONNEMENT WINDOWS (avec prints)
           ######################################################################
-	  CIBW_ENVIRONMENT_WINDOWS: |
+          CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             Python_ROOT_DIR="{python_root}"
