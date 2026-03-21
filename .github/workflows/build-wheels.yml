@@ -117,24 +117,16 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            
-            # Utilisation de / pour éviter les problèmes d'échappement Windows
-            Python_ROOT_DIR={python_root}
+ 	    Python_ROOT_DIR={python_root}
             Python_EXECUTABLE={python}
             Python_INCLUDE_DIR={python_root}/include
             Python_LIBRARY={python_root}/libs/python{python_version_nodot}.lib
             Python_LIBRARIES={python_root}/libs/python{python_version_nodot}.lib
-            
-            # On force le pass-through pour que vcpkg ne nettoie rien
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_LIBRARIES;Python_INCLUDE_DIR;Python_FIND_STRATEGY;SKBUILD_BUILD_DIR;SKBUILD_VERBOSE
-            
             Python_FIND_STRATEGY=LOCATION
             Python_FIND_REGISTRY=NEVER
-            
-            # Isolation par version
             SKBUILD_BUILD_DIR=build_{python_version_nodot}
             SKBUILD_VERBOSE=1
-            
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
