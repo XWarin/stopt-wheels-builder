@@ -44,14 +44,14 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Cache vcpkg (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: |
-            StOpt/vcpkg
-            StOpt/vcpkg/installed
-          key: ${{ runner.os }}-vcpkg-stopt-vB
+      #- name: Cache vcpkg (Windows)
+      #  if: runner.os == 'Windows'
+      #  uses: actions/cache@v4
+      #  with:
+      #    path: |
+      #      StOpt/vcpkg
+      #      StOpt/vcpkg/installed
+      #    key: ${{ runner.os }}-vcpkg-stopt-vB
 
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
@@ -94,7 +94,7 @@ jobs:
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
-###########################################################################
+      ###########################################################################
       # BUILD WHEELS — Windows
       ###########################################################################
       - name: Build_wheel_Windows
@@ -107,12 +107,13 @@ jobs:
         env:
           CIBW_BUILD_FRONTEND: "pip"
           # Utilisation de syntaxe compatible CMD (Windows)
-          CIBW_BEFORE_BUILD_WINDOWS: |
-            pip install numpy delvewheel
-            @echo --- CONTENU DU DOSSIER LIBS ---
-            dir "{python_root}\libs"
-            @echo --- VERIFICATION VARIABLE VERSION ---
-            @echo Version nodot detectee : {python_version_nodot}
+	  
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            pip install numpy delvewheel && 
+            echo "--- LIBS DIR ---" && 
+            dir "{python_root}\libs" && 
+            echo "--- VERSION NODOT ---" &&  
+            echo {python_version_nodot}
      
           CIBW_ENVIRONMENT_WINDOWS: |
             # --- CONFIGURATION CMAKE / VCPKG ---
