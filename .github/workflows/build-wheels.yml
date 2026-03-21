@@ -112,7 +112,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install numpy delvewheel && 
             echo CHECKING_LIBS && 
-            dir {python_root}/libs/python*.lib
+            dir {python_root}\libs\python*.lib
 
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
