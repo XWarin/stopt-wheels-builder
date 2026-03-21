@@ -14,13 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     env:
       # cibuildwheel Pythons
-      #CIBW_BUILD: "cp310-* cp311-* cp312-*"
-      CIBW_BUILD: "cp312-*"
+      CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
       ###########################################################################
@@ -123,7 +121,7 @@ jobs:
       ###########################################################################
       # BUILD WHEELS — Linux & macOS
       ###########################################################################
-      - name: Build wheels (Linux & macOS)
+      - name: Build_wheels_Linux_macOS
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -184,7 +182,7 @@ jobs:
       ###########################################################################
       # BUILD WHEELS — Windows
       ###########################################################################
-      - name: Build wheels (Windows)
+      - name: Build_wheel_Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -233,7 +231,43 @@ jobs:
           path: ./wheelhouse/*.whl
 
 
+# publish
+jobs:
+  
+  publish:
+    name: Publish to PyPI (Test then Prod)
+    # CONDITION CRUCIALE : Attend la réussite des  OS
+    needs: [Build_wheels_Linux_macOS, Build_wheel_Windows] 
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      id-token: write  # Requis pour Trusted Publishing (OIDC)
 
+    steps:
+      - name:  Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: cibw-* # Récupère tous les artefacts des 3 OS
+          merge-multiple: true # Met tout dans le dossier /dist
+
+      - name: 🔍 List files for verification
+        run: ls -R dist/
+
+      # --- ÉTAPE 1 : ENVOI SUR TESTPYPI ---
+      - name:Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          print-hash: true
+
+      # --- ÉTAPE 2 : ENVOI SUR PYPI (Seulement si TestPyPI OK) ---
+      - name:Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
 
 
 
