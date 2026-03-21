@@ -114,27 +114,29 @@ jobs:
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_INCLUDE_DIR;Python_FIND_STRATEGY;Python_FIND_REGISTRY;Python_FIND_VIRTUALENV
             
-            # --- FIX DETECTION PYTHON (DYNAMIQUE) ---
+            # --- FIX DETECTION PYTHON DYNAMIQUE ---
             Python_EXECUTABLE="{python}"
             Python_ROOT_DIR="{python_root}"
             Python_INCLUDE_DIR="{python_root}/include"
-            Python_LIBRARY="{python_root}/libs/python3.lib"
+            
+            # MAGIE ICI : On reconstruit le nom de la lib (ex: python311.lib, python310.lib)
+            # {python_version_nodot} donne "311" pour Python 3.11
+            Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib"
+            
+            # --- STRATÉGIE DE RECHERCHE ---
             Python_FIND_STRATEGY=LOCATION
             Python_FIND_REGISTRY=NEVER
             Python_FIND_VIRTUALENV=ONLY
 
-            # --- ISOLATION & LOGS (LA CLÉ) ---
-            # Crée build_cp310, build_cp311, etc.
+            # --- ISOLATION & LOGS ---
             SKBUILD_BUILD_DIR="build_{python_version}"
-            # Active les logs détaillés de CMake et du compilateur
             SKBUILD_VERBOSE=1
-            CMAKE_VERBOSE_MAKEFILE=ON
             
             # --- OPTIONS STOPT ---
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
-            BUILD_SDDP=OFF
+            BUILD_SDDP=OFF    
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}  
