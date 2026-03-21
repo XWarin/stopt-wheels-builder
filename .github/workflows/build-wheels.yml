@@ -210,7 +210,7 @@ jobs:
             echo "------------------------------"
 
           CIBW_ENVIRONMENT_WINDOWS: |
-            CMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
+            CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR
             # On ajoute CMAKE_FLAGS pour voir le détail de la recherche Python
