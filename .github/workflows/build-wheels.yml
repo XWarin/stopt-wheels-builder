@@ -13,11 +13,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        #os: [
+        #  windows-latest,
+        #  ubuntu-latest,
+        #  macos-latest
+        #]
         os: [
-          windows-latest,
-          ubuntu-latest,
-          macos-latest
-        ]
+          windows-latest
+         ]
 
     env:
       CIBW_BUILD: "cp312-*"
@@ -108,7 +111,7 @@ jobs:
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
       ###########################################################################
-      # BUILD — Windows
+      # BUILD — Windows (avec DEBUG)
       ###########################################################################
       - name: Build_wheel_Windows
         if: runner.os == 'Windows'
@@ -118,18 +121,51 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel"
 
-          # Fix Python 3.11 .lib detection + full compatibility 3.12/3.13
+          ######################################################################
+          # DEBUG AVANT BUILD : imprime toutes les infos Python côté Windows
+          ######################################################################
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            echo "========== DEBUG: cibuildwheel BEFORE BUILD =========="
+            echo "Python executable = {python}"
+            echo "Python root       = {python_root}"
+            echo "Version           = {python_version}"
+            echo "Version no dot    = {python_version_nodot}"
+            echo ""
+            echo "---- Contenu du dossier libs ----"
+            if exist "{python_root}\libs" (
+                dir "{python_root}\libs"
+            ) else (
+                echo "!!! ATTENTION: dossier {python_root}\libs inexistant !!!"
+            )
+            echo "========================================================"
+            pip install numpy delvewheel
+
+          ######################################################################
+          # ENVIRONNEMENT WINDOWS (avec prints)
+          ######################################################################
           CIBW_ENVIRONMENT_WINDOWS: |
-            CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
-            VCPKG_FEATURE_FLAGS=-manifests
+            echo "========== DEBUG: CIBW_ENVIRONMENT_WINDOWS =========="
+            echo "Python root  : {python_root}"
+            echo "Python exe   : {python}"
+            echo "Include dir  : {python_root}/include"
+            echo "Recherche libs: python{python_version_nodot}.lib ; python3.lib"
+            echo "------------------------------------------------------"
+            if exist "{python_root}\libs" (
+                echo "Contenu réel du dossier libs :"
+                dir "{python_root}\libs"
+            ) else (
+                echo "!!! {python_root}\libs n'existe PAS !!!"
+            )
+            echo "======================================================"
 
+            # Variables réellement utilisées par CMake
             Python_EXECUTABLE="{python}"
             Python_ROOT_DIR="{python_root}"
             Python_INCLUDE_DIR="{python_root}/include"
 
-            # FIX IMPORTANT : support 3.11, 3.12, 3.13
+            # IMPORTANT POUR PYTHON 3.11
+            # python311.lib OU python3.lib
             Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib;{python_root}/libs/python3.lib"
 
             Python_FIND_STRATEGY=LOCATION
@@ -144,9 +180,12 @@ jobs:
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
 
+          ######################################################################
+          # Réparation du wheel Windows
+          ######################################################################
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
-
+	    
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
