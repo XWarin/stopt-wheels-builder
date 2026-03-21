@@ -51,7 +51,7 @@ jobs:
           path: |
             StOpt/vcpkg
             StOpt/vcpkg/installed
-          key: ${{ runner.os }}-vcpkg-stopt-v1
+          key: ${{ runner.os }}-vcpkg-stopt-vB
 
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
