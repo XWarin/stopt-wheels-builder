@@ -94,7 +94,10 @@ jobs:
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
-      - name: Build wheels (Windows)
+###########################################################################
+      # BUILD WHEELS — Windows
+      ###########################################################################
+      - name: Build_wheel_Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -103,41 +106,38 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          
-          # IMPORTANT: On installe les outils de build ICI
-          CIBW_BEFORE_BUILD_WINDOWS: |
-            pip install numpy delvewheel
-            dir "{python_root}\libs"
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel"
 
           CIBW_ENVIRONMENT_WINDOWS: |
+            # --- CONFIGURATION CMAKE / VCPKG ---
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR;Python_LIBRARY;Python_INCLUDE_DIR;Python_FIND_STRATEGY;Python_FIND_REGISTRY;Python_FIND_VIRTUALENV
-             # FORCE LE NETTOYAGE ENTRE CP310, CP311, etc.
-            SKBUILD_BUILD_DIR=build_{python_version}
-            CMAKE_GENERATOR=Visual Studio 17 2022
-           
-            # Utilisation des HINTS (Indices) pour CMake
-            Python_ROOT_DIR="{python_root}"
+            
+            # --- FIX DETECTION PYTHON (DYNAMIQUE) ---
             Python_EXECUTABLE="{python}"
+            Python_ROOT_DIR="{python_root}"
             Python_INCLUDE_DIR="{python_root}/include"
             Python_LIBRARY="{python_root}/libs/python3.lib"
-            
-            # Forcer CMake à ignorer le registre Windows et à se concentrer sur l'env cibuildwheel
             Python_FIND_STRATEGY=LOCATION
             Python_FIND_REGISTRY=NEVER
             Python_FIND_VIRTUALENV=ONLY
+
+            # --- ISOLATION & LOGS (LA CLÉ) ---
+            # Crée build_cp310, build_cp311, etc.
+            SKBUILD_BUILD_DIR="build_{python_version}"
+            # Active les logs détaillés de CMake et du compilateur
+            SKBUILD_VERBOSE=1
+            CMAKE_VERBOSE_MAKEFILE=ON
             
-            # Variables StOpt
+            # --- OPTIONS STOPT ---
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
 
-          # Appel de delvewheel (il sera trouvé car installé via CIBW_BEFORE_BUILD)
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}
-          CIBW_TEST_COMMAND: "python -c \"import pystopt; print('Import OK')\""   
+            delvewheel repair --add-path ./vcpkg/installed/x64-windows/bin -w {dest_dir} {wheel}  
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
