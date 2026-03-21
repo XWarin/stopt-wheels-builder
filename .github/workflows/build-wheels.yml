@@ -113,7 +113,7 @@ jobs:
             dir "{python_root}\libs"
             @echo --- VERIFICATION VARIABLE VERSION ---
             @echo Version nodot detectee : {python_version_nodot}
- 	    
+     
           CIBW_ENVIRONMENT_WINDOWS: |
             # --- CONFIGURATION CMAKE / VCPKG ---
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
