@@ -120,15 +120,6 @@ jobs:
         if: runner.os == 'Windows'
         run: pip install cibuildwheel==2.17.0
 
-      - name: Inspect Python structure (Debug)
-        if: runner.os == 'Windows'
-        run: |
-          echo "PYTHON EXECUTABLE: ${{ env.CIBW_PYTHON_EXECUTABLE }}"
-          echo "PYTHON ROOT: ${{ env.CIBW_PYTHON_ROOT }}"
-          dir "${{ env.CIBW_PYTHON_ROOT }}"
-          dir "${{ env.CIBW_PYTHON_ROOT }}\include"
-          dir "${{ env.CIBW_PYTHON_ROOT }}\libs"
-        shell: pwsh
       ###########################################################################
       # BUILD WHEELS — Linux & macOS
       ###########################################################################
@@ -197,18 +188,34 @@ jobs:
         shell: pwsh
         run: |
           cd StOpt
-          cibuildwheel --output-dir ../wheelhouse
+           try {
+               cibuildwheel --output-dir wheelhouse
+             } finally {
+              # On cherche récursivement les logs CMake s'ils existent
+               Get-ChildItem -Path . -Filter "CMake*.log" -Recurse | Uncompress-Archive -DestinationPath ./debug_logs -ErrorAction SilentlyContinue
+               Get-ChildItem -Path . -Filter "CMakeConfigureLog.yaml" -Recurse | Copy-Item -Destination ./debug_logs/ -ErrorAction SilentlyContinue
+             }
         env:
           CIBW_BUILD_FRONTEND: "pip"
           # On installe numpy avant pour que find_package(Python ... NumPy) fonctionne
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy"
-          
-          # ENVIRONNEMENT DYNAMIQUE (Supporte 3.10, 3.11, 3.12 automatiquement)
+         
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            pip install numpy
+            echo "--- DEBUG PYTHON STRUCTURE ---"
+            echo "Python Exec: {python}"
+            echo "Python Root: {python_root}"
+            dir "{python_root}"
+            dir "{python_root}\include"
+            dir "{python_root}\libs"
+            echo "------------------------------"
+
           CIBW_ENVIRONMENT_WINDOWS: |
-            CMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+            CMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
             VCPKG_ENV_PASSTHROUGH_UNTOUCHED=Python_EXECUTABLE;Python_ROOT_DIR
+            # On ajoute CMAKE_FLAGS pour voir le détail de la recherche Python
             SKBUILD_CMAKE_DEFINE="Python_EXECUTABLE={python};Python_ROOT_DIR={python_root};Python_FIND_STRATEGY=LOCATION;Python_FIND_REGISTRY=NEVER;Python_FIND_VIRTUALENV=ONLY;Python_DEVELOPMENT_MODULE=ON;StOpt_PIP_LAYOUT=ON;BUILD_MPI=OFF;BUILD_TEST=OFF;BUILD_SDDP=OFF"
+            SKBUILD_LOGGING_LEVEL="DEBUG" 
 
           # Réparation du wheel pour inclure les DLL de vcpkg
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
