@@ -109,7 +109,7 @@ jobs:
             mv "$TMPDIR/$(basename $WHEEL_PATH)" "$WHEEL_PATH" &&
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
-	    
+
       ###########################################################################
       # PREPARATION VCPKG (C++ UNIQUEMENT)
       ###########################################################################
@@ -139,7 +139,11 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
           
           # CRUCIAL : On installe les outils Python via pip dans l'env de build
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install pybind11 numpy"
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            python --version
+            python -c "import sys; print(f'Executable: {sys.executable}')"
+            pip install pybind11 numpy
+            pip show pybind11 numpy         
 
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
