@@ -20,7 +20,7 @@ jobs:
         ]
 
     env:
-      CIBW_BUILD: "cp311-*"
+      CIBW_BUILD: "cp312-*"
       #CIBW_BUILD: "cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
 
@@ -51,12 +51,12 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install Python 3.11
+      - name: Install Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           # Optionnel : architecture: x64
-	  
+
       - name: Prepare vcpkg for Windows
         if: runner.os == 'Windows'
         shell: pwsh
