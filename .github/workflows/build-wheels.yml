@@ -154,7 +154,7 @@ jobs:
             Python_INCLUDE_DIR="{python_root}/include"
             Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib"
             # Arguments CMake pour scikit-build-core
-            CMAKE_ARGS="-DPython_EXECUTABLE={python} -DPython_ROOT_DIR={python_root} -DPython_FIND_STRATEGY=LOCATION -DPython_FIND_VIRTUALENV=ONLY"
+            CMAKE_ARGS="-DWITHCIBUILD=ON -DPython_EXECUTABLE={python} -DPython_ROOT_DIR={python_root} -DPython_FIND_STRATEGY=LOCATION -DPython_FIND_VIRTUALENV=ONLY"
             SKBUILD_BUILD_DIR="build_{python_version}"
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
