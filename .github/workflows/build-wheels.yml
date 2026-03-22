@@ -110,9 +110,19 @@ jobs:
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
-      ###########################################################################
-      # BUILD — Windows (avec DEBUG)
-      ###########################################################################
+      - name: Prepare vcpkg for Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd StOpt
+          if (-not (Test-Path vcpkg)) {
+            git clone https://github.com/microsoft/vcpkg vcpkg
+            .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          }
+          if (Test-Path vcpkg.json) { Remove-Item -Force vcpkg.json }
+          # ON ENLEVE pybind11 d'ici pour éviter les conflits
+          .\vcpkg\vcpkg.exe install boost-multi-array boost-random boost-serialization eigen3 --triplet x64-windows
+
       - name: Build_wheel_Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -120,31 +130,25 @@ jobs:
           cd StOpt
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
-          CIBW_BUILD_FRONTEND: "pip"
-
-          ######################################################################
-          # ENVIRONNEMENT WINDOWS (avec prints)
-          ######################################################################
+          CIBW_BUILD: "cp311-* cp312-*"
+          # On installe pybind11 et numpy via pip AVANT le build CMake
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install pybind11 numpy"
+          
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            # --- EVITER LE CONFLIT VCPKG/PYTHON ---
-            # On dit à vcpkg de NE PAS chercher Python lui-même
-            CMAKE_ARGS="-DVCPKG_PYTHON_INTERPRETER={python} -DPython_EXECUTABLE={python} -DPython_ROOT_DIR={python_root} -DPython_FIND_STRATEGY=LOCATION -DSelectPython_DEBUG=ON"
-            
-            # Chemins explicites pour scikit-build-core
             Python_EXECUTABLE="{python}"
             Python_ROOT_DIR="{python_root}"
             Python_INCLUDE_DIR="{python_root}/include"
             Python_LIBRARY="{python_root}/libs/python{python_version_nodot}.lib"
-            
-            # Configuration StOpt
+            # On force CMake à ignorer le dossier tools de vcpkg pour Python
+            CMAKE_ARGS="-DPython_EXECUTABLE={python} -DPython_ROOT_DIR={python_root} -DPython_FIND_STRATEGY=LOCATION -DPython_FIND_VIRTUALENV=ONLY -DSelectPython_DEBUG=ON"
             SKBUILD_BUILD_DIR="build_{python_version}"
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
-            BUILD_SDDP=OFF
             WITHCIBUILD=ON
+
 
           ######################################################################
           # Réparation du wheel Windows
