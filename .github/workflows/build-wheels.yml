@@ -19,7 +19,7 @@ jobs:
         #  macos-latest
         #]
         os: [
-          windows-latest
+          windows-latest,ubuntu-latest 
          ]
 
     env:
