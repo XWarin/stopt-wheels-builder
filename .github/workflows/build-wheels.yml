@@ -118,7 +118,9 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FEATURE_FLAGS=-manifests
-            Python3_ROOT_DIR="{python_root}"
+            Python3_ROOT_DIR="${{ env.pythonLocation }}"
+            Python3_FIND_STRATEGY=LOCATION
+            Python3_FIND_REGISTRY=NEVER
             StOpt_PIP_LAYOUT=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
