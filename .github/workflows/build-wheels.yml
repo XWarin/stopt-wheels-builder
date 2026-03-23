@@ -20,7 +20,7 @@ jobs:
         #]
         os: [
           windows-latest
-       ]
+        ]
 
     env:
       CIBW_BUILD: "cp312-*"
