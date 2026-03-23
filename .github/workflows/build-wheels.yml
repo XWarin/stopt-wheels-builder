@@ -102,9 +102,14 @@ jobs:
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
+  
       ###########################################################################
       # BUILD — Windows
       ###########################################################################
+      - name: Load MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build_wheel_Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -113,14 +118,16 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel ninja" # On ajoute ninja
-          
-          # On force Ninja pour éviter les conflits Debug/Release de Visual Studio
-          CIBW_CONFIG_SETTINGS_WINDOWS: "cmake.args=-Wno-dev;-GNinja" 
-          
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel ninja"
+
+          # Syntaxe stable
+          CIBW_CONFIG_SETTINGS_WINDOWS: 'cmake.args=-GNinja;-Wno-dev'
+
+          # Chemins relatifs uniquement
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             CMAKE_BUILD_TYPE=Release
+            CMAKE_GENERATOR_PLATFORM=""
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
@@ -128,8 +135,10 @@ jobs:
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
 
+          # Réparation wheel avec chemins Conan
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path conan_build -w {dest_dir} {wheel}
+            delvewheel repair --add-path "conan_build" -w {dest_dir} {wheel}      - name: Load MSVC environment
+  
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
