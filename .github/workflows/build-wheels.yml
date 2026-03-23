@@ -113,7 +113,10 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel"
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel ninja" # On ajoute ninja
+          
+          # On force Ninja pour éviter les conflits Debug/Release de Visual Studio
+          CIBW_CONFIG_SETTINGS_WINDOWS: "cmake.args=-Wno-dev;-GNinja" 
           
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
