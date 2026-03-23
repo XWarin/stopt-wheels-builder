@@ -109,6 +109,8 @@ jobs:
       - name: Load MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Build_wheel_Windows
         if: runner.os == 'Windows'
@@ -118,27 +120,18 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel ninja"
+          # On laisse le pyproject.toml gérer Ninja
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel"
 
-          # Syntaxe stable
-          CIBW_CONFIG_SETTINGS_WINDOWS: 'cmake.args=-GNinja;-Wno-dev'
-
-          # Chemins relatifs uniquement
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             CMAKE_BUILD_TYPE=Release
-            CMAKE_GENERATOR_PLATFORM=""
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
-            BUILD_MPI=OFF
-            BUILD_TEST=OFF
-            BUILD_SDDP=OFF
 
-          # Réparation wheel avec chemins Conan
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path "conan_build" -w {dest_dir} {wheel}      - name: Load MSVC environment
-  
+            delvewheel repair --add-path conan_build -w {dest_dir} {wheel}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
