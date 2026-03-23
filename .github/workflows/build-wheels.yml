@@ -117,6 +117,7 @@ jobs:
           
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
+            CMAKE_BUILD_TYPE=Release
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
