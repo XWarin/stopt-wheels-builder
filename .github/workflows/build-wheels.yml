@@ -20,8 +20,8 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: "pytest"
-      CIBW_TEST_COMMAND: |
-        pytest -q "{project}/test/python/unit/grids"
+      CIBW_TEST_COMMAND: >
+        pytest -q {project}/StOpt/test/python/unit/grids
 
     steps:
       - name: Checkout repository
