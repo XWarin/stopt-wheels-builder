@@ -21,7 +21,7 @@ jobs:
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: "pytest"
       CIBW_TEST_COMMAND: |
-        pytest -q "{project}/StOpt/test/python/unit/grids"
+        pytest -q "{project}/test/python/unit/grids"
 
     steps:
       - name: Checkout repository
