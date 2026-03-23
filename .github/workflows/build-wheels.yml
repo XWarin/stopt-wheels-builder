@@ -20,12 +20,8 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: ""
-      CIBW_TEST_COMMAND: 
-        python - << 'EOF'
-        import pystopt
-        import pystopt.grids
-        print("OK")
-        EOF
+      CIBW_TEST_COMMAND: "python -c \"import pystopt; import pystopt.grids; print('OK')\""
+ 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4 
