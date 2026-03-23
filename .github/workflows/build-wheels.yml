@@ -13,29 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #os: [
-        #  windows-latest,
-        #  ubuntu-latest,
-        #  macos-latest
-        #]
-        os: [
-          windows-latest
-        ]
+        os: [windows-latest, ubuntu-latest, macos-latest]
 
     env:
       CIBW_BUILD: "cp312-*"
-      #CIBW_BUILD: "cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
-
-      CIBW_ENVIRONMENT_LINUX: "SKBUILD_PYTHON_INTERPRETER={python}"
-
-      CIBW_ARCHS_MACOS: "x86_64"
-      CIBW_ENVIRONMENT_MACOS: >
-        CC=/usr/bin/clang
-        CXX=/usr/bin/clang++
-        MACOSX_DEPLOYMENT_TARGET=10.15
-        Boost_NO_BOOST_CMAKE=ON
-      SKBUILD_CMAKE_INSTALL_DIR: "{package}/pystopt"
       SKBUILD_VERBOSE: "1"
 
     steps:
@@ -46,14 +28,17 @@ jobs:
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
 
       - name: Make macOS scripts executable
+        if: runner.os == 'macOS'
         run: chmod +x StOpt/utils/*.sh
 
-      - name: Setup Python for Linux/macOS
-        if: runner.os != 'Windows'
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      ###########################################################################
+      # PREPARE DEPENDENCIES (Windows Only)
+      ###########################################################################
       - name: Install Conan
         if: runner.os == 'Windows'
         run: |
@@ -81,10 +66,9 @@ jobs:
           boost/*:shared=True
           "@
           Set-Content -Path conanfile.txt -Value $conanfile
-          # Installation des binaires pré-compilés
           conan install . --output-folder=conan_build --build=missing -s build_type=Release
 
-    - name: Install cibuildwheel
+      - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.17.0
 
       ###########################################################################
@@ -105,8 +89,9 @@ jobs:
             wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
             tar -xzf boost_1_84_0.tar.gz &&
             cd boost_1_84_0 && ./bootstrap.sh && ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
+          
           CIBW_BEFORE_ALL_MACOS: "brew install boost eigen cmake zlib bzip2"
-
+          
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             export WHEEL_PATH={wheel} &&
             TMPDIR=$(mktemp -d) &&
@@ -116,7 +101,7 @@ jobs:
             mv "$TMPDIR/$(basename $WHEEL_PATH)" "$WHEEL_PATH" &&
             rm -rf "$TMPDIR" &&
             delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
-	    
+
       ###########################################################################
       # BUILD — Windows
       ###########################################################################
@@ -133,15 +118,15 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             STOPT_PIP_LAYOUT=ON
+            STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
             BUILD_MPI=OFF
             BUILD_TEST=OFF
             BUILD_SDDP=OFF
 
-          # On indique à delvewheel où trouver les DLL de Boost pour les inclure dans la wheel
-          # Conan les place dans son dossier de cache, mais les rend accessibles via le build folder
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path conan_build -w {dest_dir} {wheel} 
+            delvewheel repair --add-path conan_build -w {dest_dir} {wheel}
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
