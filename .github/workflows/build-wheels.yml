@@ -63,9 +63,7 @@ jobs:
         shell: pwsh
         run: |
           cd StOpt
-          conan install . --output-folder=conan_build --build=missing ^
-            -s build_type=Release ^
-            -c tools.cmake.cmaketoolchain:generator=Ninja
+          conan install . --output-folder=conan_build --build=missing  -s build_type=Release -c tools.cmake.cmaketoolchain:generator=Ninja
 
 
       - name: Install cibuildwheel
