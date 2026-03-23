@@ -20,7 +20,7 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: ""
-      CIBW_TEST_COMMAND: |
+      CIBW_TEST_COMMAND: 
         python - << 'EOF'
         import pystopt
         import pystopt.grids
