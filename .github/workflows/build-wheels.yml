@@ -135,8 +135,10 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             CMAKE_BUILD_TYPE=Release
-            # LA LIGNE CRUCIALE : on force la plateforme à vide pour désactiver le flag -A
-            CMAKE_GENERATOR_PLATFORM=""
+            CMAKE_GENERATOR=Ninja
+            CMAKE_GENERATOR_PLATFORM=   
+            SKBUILD_CMAKE_GENERATOR="Ninja"
+            SKBUILD_CMAKE_ARGS="-GNinja"
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
