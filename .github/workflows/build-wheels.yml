@@ -19,9 +19,13 @@ jobs:
       CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
-      CIBW_TEST_REQUIRES: "pytest"
-      CIBW_TEST_COMMAND: >
-        python -c "import pystopt, pystopt.grids; print('OK')
+      CIBW_TEST_REQUIRES: ""
+      CIBW_TEST_COMMAND: |
+        python - << 'EOF'
+        import pystopt
+        import pystopt.grids
+        print("OK")
+       EOF
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4 
