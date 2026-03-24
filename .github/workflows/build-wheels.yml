@@ -29,9 +29,6 @@ jobs:
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
         
-      - name: Patch StOpt __init__.py
-        run: cp python/pystopt/__init__.py StOpt/python/pystopt/__init__.py
-
       - name: Make macOS scripts executable
         if: runner.os == 'macOS'
         run: chmod +x StOpt/utils/*.sh
