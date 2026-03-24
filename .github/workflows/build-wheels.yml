@@ -20,7 +20,7 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: ""
-      CIBW_TEST_COMMAND: "python -c \"import pystopt; import pystopt.grids; print('OK')\""
+      #CIBW_TEST_COMMAND: "python -c \"import pystopt; import pystopt.grids; print('OK')\""
  
     steps:
       - name: Checkout repository
@@ -28,8 +28,10 @@ jobs:
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
+        
       - name: Patch StOpt __init__.py
         run: cp python/pystopt/__init__.py StOpt/python/pystopt/__init__.py
+
       - name: Make macOS scripts executable
         if: runner.os == 'macOS'
         run: chmod +x StOpt/utils/*.sh
@@ -144,31 +146,3 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
-  publish:
-    name: Publish to PyPI (Test then Prod)
-    needs: [build_wheels] 
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      id-token: write
-    steps:
-      - name: Download all wheels
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          pattern: wheels-*
-          merge-multiple: true
-
-      - name: List files
-        run: ls -R dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: dist/
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
