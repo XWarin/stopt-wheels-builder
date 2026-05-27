@@ -145,14 +145,41 @@ jobs:
             BUILD_PYTHON=ON
  
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            pwsh -NoProfile -Command "
-            $dllDirs = (Get-ChildItem $env:USERPROFILE\.conan2\p -Recurse -Filter *.dll |
-              Select-Object -ExpandProperty DirectoryName -Unique) -join ';';
-            Write-Host 'Conan DLL dirs:' $dllDirs;
-            delvewheel show --add-path $dllDirs {wheel};
-            delvewheel repair --add-path $dllDirs -w {dest_dir} {wheel}
-            "
+            pwsh -NoProfile -Command "& {
+              Write-Host 'Starting delvewheel repair';
+              Write-Host 'Wheel: {wheel}';
+              Write-Host 'Dest dir: {dest_dir}';
 
+              $conanCache = Join-Path $env:USERPROFILE '.conan2\p';
+
+              $dllDirsList = @();
+
+              if (Test-Path 'conan_build') {
+                $dllDirsList += (Resolve-Path 'conan_build').Path;
+              }
+
+              if (Test-Path $conanCache) {
+                $dllDirsList += Get-ChildItem $conanCache -Recurse -Filter *.dll |
+                  Select-Object -ExpandProperty DirectoryName -Unique;
+              }
+
+              $dllDirsList = $dllDirsList | Select-Object -Unique;
+              $dllDirs = $dllDirsList -join ';';
+
+              Write-Host 'DLL search dirs:';
+              $dllDirsList | ForEach-Object { Write-Host $_ };
+
+              if ([string]::IsNullOrWhiteSpace($dllDirs)) {
+                Write-Host 'No extra DLL directory found. Running delvewheel without --add-path.';
+                delvewheel repair -v -w '{dest_dir}' '{wheel}';
+              } else {
+                Write-Host 'Running delvewheel show...';
+                delvewheel show --add-path $dllDirs '{wheel}';
+
+                Write-Host 'Running delvewheel repair...';
+                delvewheel repair -v --add-path $dllDirs -w '{dest_dir}' '{wheel}';
+              }
+            }"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
