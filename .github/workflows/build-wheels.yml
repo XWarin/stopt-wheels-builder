@@ -134,7 +134,7 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
 
           CIBW_BEFORE_BUILD_WINDOWS: >
-            pip install numpy<2 "pybind11>=2.13" delvewheel ninja
+            pip install "numpy<2" "pybind11>=2.13" delvewheel ninja
             #pip install numpy "pybind11>=2.12" delvewheel ninja
           CIBW_ENVIRONMENT_WINDOWS:  |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
