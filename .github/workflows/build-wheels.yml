@@ -14,15 +14,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest] #, ubuntu-latest, macos-latest]
 
     env:
       CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: "numpy"
-
-      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK');import numpy as np;pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([0.]), np.array([1], dtype=np.int32));\""
+      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK'); import numpy as np; pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([0.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
 
     steps:
       - name: Checkout repository
@@ -30,6 +29,10 @@ jobs:
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
+
+      - name: Make macOS scripts executable
+        if: runner.os == 'macOS'
+        run: chmod +x StOpt/utils/*.sh
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -75,11 +78,11 @@ jobs:
         run: python -m pip install "cibuildwheel==2.21.0" "scikit-build-core>=0.9.8" ninja
 
       ###########################################################################
-      # BUILD — Linux
+      # BUILD — Linux & macOS
       ###########################################################################
 
-      - name: Build_wheels_Linux
-        if: runner.os == 'Linux'
+      - name: Build_wheels_Linux_macOS
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd StOpt
@@ -93,6 +96,21 @@ jobs:
             wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
             tar -xzf boost_1_84_0.tar.gz &&
             cd boost_1_84_0 && ./bootstrap.sh && ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
+
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install boost eigen cmake zlib bzip2
+
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            export WHEEL_PATH={wheel} &&
+            TMPDIR=$(mktemp -d) &&
+            unzip "$WHEEL_PATH" -d "$TMPDIR" &&
+            bash utils/fix_stopt_macos_libs.sh "$TMPDIR" &&
+            (cd "$TMPDIR" && zip -r -9 "$(basename $WHEEL_PATH)" .) &&
+            mv "$TMPDIR/$(basename $WHEEL_PATH)" "$WHEEL_PATH" &&
+            rm -rf "$TMPDIR" &&
+            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
       ###########################################################################
       # BUILD — Windows
@@ -115,7 +133,6 @@ jobs:
 
           CIBW_BEFORE_BUILD_WINDOWS: >
             pip install numpy "pybind11>=2.12" delvewheel ninja
-
           CIBW_ENVIRONMENT_WINDOWS: |
             CMAKE_BUILD_TYPE=Release
             CMAKE_GENERATOR=Ninja
@@ -125,7 +142,7 @@ jobs:
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST=pystopt
             BUILD_PYTHON=ON
-
+ 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
             pwsh -NoProfile -Command "
             $dllDirs = (Get-ChildItem $env:USERPROFILE\.conan2\p -Recurse -Filter *.dll |
@@ -144,14 +161,17 @@ jobs:
   ###########################################################################
   # PUBLISH — TEST PYPI
   ###########################################################################
+
   publish-test:
     name: Publish to TestPyPI
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    # On autorise le job sur master, tags, ou lancement manuel
+
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+
     permissions:
       id-token: write
+
     steps:
       - name: Download all wheels
         uses: actions/download-artifact@v4
@@ -170,14 +190,17 @@ jobs:
   ###########################################################################
   # PUBLISH — PROD PYPI
   ###########################################################################
+
   publish-prod:
     name: Publish to PyPI
-    needs: [publish-test] # On attend que le test soit fini
-    # Uniquement sur les tags officiels
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [publish-test]
     runs-on: ubuntu-latest
+
+    if: startsWith(github.ref, 'refs/tags/v')
+
     permissions:
       id-token: write
+
     steps:
       - name: Download all wheels
         uses: actions/download-artifact@v4
@@ -190,4 +213,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-  
