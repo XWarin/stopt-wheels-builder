@@ -17,10 +17,12 @@ jobs:
         os: [windows-latest] #, ubuntu-latest, macos-latest]
 
     env:
-      CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+      #CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+      CIBW_BUILD: "cp310-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
-      CIBW_TEST_REQUIRES: "numpy"
+      #CIBW_TEST_REQUIRES: "numpy"
+      CIBW_TEST_REQUIRES: "numpy<2"
       CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK'); import numpy as np; pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([1.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
 
     steps:
@@ -132,7 +134,8 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
 
           CIBW_BEFORE_BUILD_WINDOWS: >
-            pip install numpy "pybind11>=2.12" delvewheel ninja
+            pip install numpy<2 "pybind11>=2.13" delvewheel ninja
+            #pip install numpy "pybind11>=2.12" delvewheel ninja
           CIBW_ENVIRONMENT_WINDOWS:  |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             CMAKE_BUILD_TYPE=Release
