@@ -21,7 +21,7 @@ jobs:
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: "numpy"
-      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK'); import numpy as np; pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([0.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
+      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK'); import numpy as np; pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([1.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
 
     steps:
       - name: Checkout repository
@@ -143,40 +143,10 @@ jobs:
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
-
+            
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            pwsh -NoProfile -Command "
-            $ErrorActionPreference = 'Stop';
-            Write-Host 'Starting delvewheel repair';
-            Write-Host 'Wheel: {wheel}';
-            Write-Host 'Dest dir: {dest_dir}';
+            delvewheel repair --add-path conan_build -w {dest_dir} {wheel}
 
-            $conanCache = Join-Path $env:USERPROFILE '.conan2\p';
-            $dllDirsList = @();
-
-            if (Test-Path 'conan_build') {
-              $dllDirsList += (Resolve-Path 'conan_build').Path;
-            }
-
-            if (Test-Path $conanCache) {
-              $dllDirsList += Get-ChildItem $conanCache -Recurse -Filter *.dll |
-                Select-Object -ExpandProperty DirectoryName -Unique;
-            }
-
-            $dllDirsList = $dllDirsList | Select-Object -Unique;
-            $dllDirs = $dllDirsList -join ';';
-
-            Write-Host 'DLL search dirs:';
-            $dllDirsList | ForEach-Object { Write-Host $_ };
-
-            if ([string]::IsNullOrWhiteSpace($dllDirs)) {
-              Write-Host 'No extra DLL directory found. Running delvewheel without --add-path.';
-              delvewheel repair -v -w '{dest_dir}' '{wheel}';
-            } else {
-              Write-Host 'Running delvewheel repair...';
-              delvewheel repair -v --add-path $dllDirs -w '{dest_dir}' '{wheel}';
-            }
-            "
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
