@@ -143,43 +143,40 @@ jobs:
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
- 
+
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            pwsh -NoProfile -Command "& {
-              Write-Host 'Starting delvewheel repair';
-              Write-Host 'Wheel: {wheel}';
-              Write-Host 'Dest dir: {dest_dir}';
+            pwsh -NoProfile -Command "
+            $ErrorActionPreference = 'Stop';
+            Write-Host 'Starting delvewheel repair';
+            Write-Host 'Wheel: {wheel}';
+            Write-Host 'Dest dir: {dest_dir}';
 
-              $conanCache = Join-Path $env:USERPROFILE '.conan2\p';
+            $conanCache = Join-Path $env:USERPROFILE '.conan2\p';
+            $dllDirsList = @();
 
-              $dllDirsList = @();
+            if (Test-Path 'conan_build') {
+              $dllDirsList += (Resolve-Path 'conan_build').Path;
+            }
 
-              if (Test-Path 'conan_build') {
-                $dllDirsList += (Resolve-Path 'conan_build').Path;
-              }
+            if (Test-Path $conanCache) {
+              $dllDirsList += Get-ChildItem $conanCache -Recurse -Filter *.dll |
+                Select-Object -ExpandProperty DirectoryName -Unique;
+            }
 
-              if (Test-Path $conanCache) {
-                $dllDirsList += Get-ChildItem $conanCache -Recurse -Filter *.dll |
-                  Select-Object -ExpandProperty DirectoryName -Unique;
-              }
+            $dllDirsList = $dllDirsList | Select-Object -Unique;
+            $dllDirs = $dllDirsList -join ';';
 
-              $dllDirsList = $dllDirsList | Select-Object -Unique;
-              $dllDirs = $dllDirsList -join ';';
+            Write-Host 'DLL search dirs:';
+            $dllDirsList | ForEach-Object { Write-Host $_ };
 
-              Write-Host 'DLL search dirs:';
-              $dllDirsList | ForEach-Object { Write-Host $_ };
-
-              if ([string]::IsNullOrWhiteSpace($dllDirs)) {
-                Write-Host 'No extra DLL directory found. Running delvewheel without --add-path.';
-                delvewheel repair -v -w '{dest_dir}' '{wheel}';
-              } else {
-                Write-Host 'Running delvewheel show...';
-                delvewheel show --add-path $dllDirs '{wheel}';
-
-                Write-Host 'Running delvewheel repair...';
-                delvewheel repair -v --add-path $dllDirs -w '{dest_dir}' '{wheel}';
-              }
-            }"
+            if ([string]::IsNullOrWhiteSpace($dllDirs)) {
+              Write-Host 'No extra DLL directory found. Running delvewheel without --add-path.';
+              delvewheel repair -v -w '{dest_dir}' '{wheel}';
+            } else {
+              Write-Host 'Running delvewheel repair...';
+              delvewheel repair -v --add-path $dllDirs -w '{dest_dir}' '{wheel}';
+            }
+            "
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
