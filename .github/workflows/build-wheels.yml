@@ -1,37 +1,35 @@
 name: Build Wheels
 
-on: 
+on:
   workflow_dispatch:
   push:
-    branches: [ master ]
-    tags: [ 'v*' ]
+    branches: [master]
+    tags: ["v*"]
 
 jobs:
   build_wheels:
     name: Build_on_${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
 
     env:
       CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
-      CIBW_TEST_REQUIRES: ""
-      CIBW_TEST_COMMAND: "python -c \"import pystopt; import pystopt.grids; print('OK')\""
- 
+      CIBW_TEST_REQUIRES: "numpy"
+
+      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK');import numpy as np;pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([0.]), np.array([1], dtype=np.int32));\""
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Clone StOpt
         run: git clone https://gitlab.com/stochastic-control/StOpt.git
-        
-      - name: Make macOS scripts executable
-        if: runner.os == 'macOS'
-        run: chmod +x StOpt/utils/*.sh
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -39,8 +37,9 @@ jobs:
           python-version: "3.10"
 
       ###########################################################################
-      # PREPARE DEPENDENCIES (Windows Only)
+      # PREPARE DEPENDENCIES — Windows Only
       ###########################################################################
+
       - name: Conan cache
         if: runner.os == 'Windows'
         uses: actions/cache@v4
@@ -51,8 +50,7 @@ jobs:
             ~/.conan2/recipes
           key: conan2-${{ runner.os }}-${{ hashFiles('StOpt/conanfile.txt') }}
           restore-keys: |
-            conan2-${{ runner.os }}-  
-
+            conan2-${{ runner.os }}-
 
       - name: Install Conan
         if: runner.os == 'Windows'
@@ -65,17 +63,23 @@ jobs:
         shell: pwsh
         run: |
           cd StOpt
-          conan install . --output-folder=conan_build --build=missing  -s build_type=Release -c tools.cmake.cmaketoolchain:generator=Ninja
-
+          conan install . `
+            --output-folder=conan_build `
+            --build=missing `
+            -s build_type=Release `
+            -s compiler.runtime=dynamic `
+            -s compiler.runtime_type=Release `
+            -c tools.cmake.cmaketoolchain:generator=Ninja
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.21.0  scikit-build-core>=0.9.8 ninja
+        run: python -m pip install "cibuildwheel==2.21.0" "scikit-build-core>=0.9.8" ninja
 
       ###########################################################################
-      # BUILD — Linux & macOS
+      # BUILD — Linux
       ###########################################################################
-      - name: Build_wheels_Linux_macOS
-        if: runner.os != 'Windows'
+
+      - name: Build_wheels_Linux
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd StOpt
@@ -89,24 +93,11 @@ jobs:
             wget https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.gz &&
             tar -xzf boost_1_84_0.tar.gz &&
             cd boost_1_84_0 && ./bootstrap.sh && ./b2 install --prefix=/usr/local --with-serialization --with-system --with-random --with-log --with-thread --with-chrono --with-atomic threading=multi link=shared
-          
-          MACOSX_DEPLOYMENT_TARGET: "15.0"
-          CIBW_BEFORE_ALL_MACOS: "brew install boost eigen cmake zlib bzip2"
-          
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            export WHEEL_PATH={wheel} &&
-            TMPDIR=$(mktemp -d) &&
-            unzip "$WHEEL_PATH" -d "$TMPDIR" &&
-            bash utils/fix_stopt_macos_libs.sh "$TMPDIR" &&
-            (cd "$TMPDIR" && zip -r -9 "$(basename $WHEEL_PATH)" .) &&
-            mv "$TMPDIR/$(basename $WHEEL_PATH)" "$WHEEL_PATH" &&
-            rm -rf "$TMPDIR" &&
-            delocate-wheel -v --lib-sdir pystopt -w {dest_dir} "$WHEEL_PATH"
 
-  
       ###########################################################################
       # BUILD — Windows
       ###########################################################################
+
       - name: Load MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -121,29 +112,34 @@ jobs:
           python -m cibuildwheel --output-dir ../wheelhouse
         env:
           CIBW_BUILD_FRONTEND: "pip"
-          # On ajoute ninja explicitement ici pour être sûr
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install numpy delvewheel ninja"
+
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            pip install numpy "pybind11>=2.12" delvewheel ninja
 
           CIBW_ENVIRONMENT_WINDOWS: |
-            CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
             CMAKE_BUILD_TYPE=Release
             CMAKE_GENERATOR=Ninja
-            CMAKE_GENERATOR_PLATFORM=   
-            SKBUILD_CMAKE_GENERATOR="Ninja"
-            SKBUILD_CMAKE_ARGS="-GNinja"
+            CMAKE_GENERATOR_PLATFORM=
+            SKBUILD_CMAKE_GENERATOR=Ninja
+            SKBUILD_CMAKE_ARGS=-GNinja;-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/StOpt/conan_build/conan_toolchain.cmake
             STOPT_PIP_LAYOUT=ON
-            STOPT_PY_DEST="pystopt"
+            STOPT_PY_DEST=pystopt
             BUILD_PYTHON=ON
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >
-            delvewheel repair --add-path conan_build -w {dest_dir} {wheel}
-    
+            pwsh -NoProfile -Command "
+            $dllDirs = (Get-ChildItem $env:USERPROFILE\.conan2\p -Recurse -Filter *.dll |
+              Select-Object -ExpandProperty DirectoryName -Unique) -join ';';
+            Write-Host 'Conan DLL dirs:' $dllDirs;
+            delvewheel show --add-path $dllDirs {wheel};
+            delvewheel repair --add-path $dllDirs -w {dest_dir} {wheel}
+            "
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
-
 
   ###########################################################################
   # PUBLISH — TEST PYPI
@@ -194,3 +190,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+  
