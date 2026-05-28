@@ -23,7 +23,7 @@ jobs:
       SKBUILD_VERBOSE: "1"
       #CIBW_TEST_REQUIRES: "numpy"
       CIBW_TEST_REQUIRES: "numpy<2"
-      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import pystopt; import pystopt.grids; print('OK'); import numpy as np; print('numpy', np.__version__);pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([1.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
+      CIBW_TEST_COMMAND: "python -X faulthandler -c \"import importlib.metadata as md; import numpy as np; import pystopt; import pystopt.grids; print('pystopt requires:', md.requires('pystopt')); print('numpy', np.__version__); print('OK import'); pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([1.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
 
     steps:
       - name: Checkout repository
