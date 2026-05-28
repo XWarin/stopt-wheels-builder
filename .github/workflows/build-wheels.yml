@@ -21,7 +21,6 @@ jobs:
       CIBW_BUILD: "cp310-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
-      #CIBW_TEST_REQUIRES: "numpy"
       CIBW_TEST_REQUIRES: ""
       CIBW_TEST_COMMAND: "python -X faulthandler -c \"import importlib.metadata as md; import numpy as np; import pystopt; import pystopt.grids; print('pystopt requires:', md.requires('pystopt')); print('numpy', np.__version__); print('OK import'); pystopt.grids.RegularSpaceGrid(np.array([0.]), np.array([1.]), np.array([1], dtype=np.int32)); print('RegularSpaceGrid OK')\""
 
@@ -117,7 +116,6 @@ jobs:
       ###########################################################################
       # BUILD — Windows
       ###########################################################################
-      #pip install numpy "pybind11>=2.12" delvewheel ninja
       
       - name: Load MSVC environment
         if: runner.os == 'Windows'
@@ -135,7 +133,8 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
 
           CIBW_BEFORE_BUILD_WINDOWS: >
-            pip install "numpy<2" "pybind11>=2.13" delvewheel ninja
+            pip install "numpy>=2" "pybind11>=2.13" delvewheel ninja
+
             
           CIBW_ENVIRONMENT_WINDOWS:  |
             CMAKE_TOOLCHAIN_FILE="conan_build/conan_toolchain.cmake"
