@@ -136,7 +136,7 @@ jobs:
           CIBW_BUILD_FRONTEND: "pip"
 
           CIBW_BEFORE_BUILD_WINDOWS: >
-            pip install "numpy>=2" "pybind11>=2.13" delvewheel ninja
+            pip install "numpy>=2" "pybind11>=3.0" delvewheel ninja
 
             
           CIBW_ENVIRONMENT_WINDOWS:  |
@@ -145,7 +145,7 @@ jobs:
             CMAKE_GENERATOR=Ninja
             CMAKE_GENERATOR_PLATFORM=   
             SKBUILD_CMAKE_GENERATOR="Ninja"
-            SKBUILD_CMAKE_ARGS="-GNinja"
+            SKBUILD_CMAKE_ARGS="-GNinja -DSTOPT_PREFER_PIP_PYBIND11=ON"
             STOPT_PIP_LAYOUT=ON
             STOPT_PY_DEST="pystopt"
             BUILD_PYTHON=ON
