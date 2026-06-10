@@ -17,7 +17,7 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     env:
-      CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+      CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*  cp314-*"
       CIBW_SKIP: "*-win32 *_i686 pp* *-musllinux_*"
       SKBUILD_VERBOSE: "1"
       CIBW_TEST_REQUIRES: ""
@@ -78,7 +78,7 @@ jobs:
             -c tools.cmake.cmaketoolchain:generator=Ninja
 
       - name: Install cibuildwheel
-        run: python -m pip install "cibuildwheel==2.21.0" "scikit-build-core>=0.9.8" ninja
+        run: python -m pip install "cibuildwheel==3.4.1" "scikit-build-core>=0.9.8" ninja
 
       ###########################################################################
       # BUILD — Linux & macOS
